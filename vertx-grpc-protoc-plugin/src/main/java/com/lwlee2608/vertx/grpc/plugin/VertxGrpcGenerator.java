@@ -263,49 +263,24 @@ public class VertxGrpcGenerator extends Generator {
     }
 
     private List<PluginProtos.CodeGeneratorResponse.File> buildFiles(ServiceContext context) {
-        return List.of(buildClientApiFile(context),
-                buildServerApiFile(context),
+        return List.of(
                 buildClientFile(context),
                 buildServerFile(context));
-    }
-
-    private PluginProtos.CodeGeneratorResponse.File buildClientApiFile(ServiceContext context) {
-        context.fileName = CLASS_PREFIX + context.serviceName + "GrpcClientApi.java";
-        context.className = CLASS_PREFIX + context.serviceName + "GrpcClientApi";
-        String content = applyTemplate("clientApi.mustache", context);
-        return PluginProtos.CodeGeneratorResponse.File
-                .newBuilder()
-                .setName(absoluteFileName(context))
-                .setContent(content)
-                .build();
     }
 
     private PluginProtos.CodeGeneratorResponse.File buildClientFile(ServiceContext context) {
         context.fileName = CLASS_PREFIX + context.serviceName + "GrpcClient.java";
         context.className = CLASS_PREFIX + context.serviceName + "GrpcClient";
-        String content = applyTemplate("client.mustache", context);
-        return PluginProtos.CodeGeneratorResponse.File
-                .newBuilder()
-                .setName(absoluteFileName(context))
-                .setContent(content)
-                .build();
-    }
-
-    private PluginProtos.CodeGeneratorResponse.File buildServerApiFile(ServiceContext context) {
-        context.fileName = CLASS_PREFIX + context.serviceName + "GrpcServerApi.java";
-        context.className = CLASS_PREFIX + context.serviceName + "GrpcServerApi";
-        String content = applyTemplate("serverApi.mustache", context);
-        return PluginProtos.CodeGeneratorResponse.File
-                .newBuilder()
-                .setName(absoluteFileName(context))
-                .setContent(content)
-                .build();
+        return buildFile(context, applyTemplate("client.mustache", context));
     }
 
     private PluginProtos.CodeGeneratorResponse.File buildServerFile(ServiceContext context) {
         context.fileName = CLASS_PREFIX + context.serviceName + "GrpcServer.java";
         context.className = CLASS_PREFIX + context.serviceName + "GrpcServer";
-        String content = applyTemplate("server.mustache", context);
+        return buildFile(context, applyTemplate("server.mustache", context));
+    }
+
+    private PluginProtos.CodeGeneratorResponse.File buildFile(ServiceContext context, String content) {
         return PluginProtos.CodeGeneratorResponse.File
                 .newBuilder()
                 .setName(absoluteFileName(context))

@@ -6,17 +6,15 @@ import com.google.protobuf.EmptyProtos;
 import io.grpc.testing.integration.Messages;
 import io.grpc.testing.integration.VertxTestServiceGrpcClient;
 import io.grpc.testing.integration.VertxTestServiceGrpcServer;
-import io.grpc.testing.integration.VertxTestServiceGrpcServerApi;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.impl.logging.Logger;
-import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.grpc.common.GrpcReadStream;
 import io.vertx.grpc.server.GrpcServerRequest;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -31,7 +29,6 @@ import java.util.List;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
 public class GoogleTest {
-    private static final Logger LOG = LoggerFactory.getLogger(GoogleTest.class);
 
     VertxTestServiceGrpcClient client;
     int port;
@@ -39,8 +36,10 @@ public class GoogleTest {
     @BeforeAll
     public void init(Vertx vertx, VertxTestContext should) throws IOException {
         port = getFreePort();
+
+        // Create gRPC Server
         VertxTestServiceGrpcServer server = new VertxTestServiceGrpcServer(vertx)
-                .callHandlers(new VertxTestServiceGrpcServerApi() {
+                .callHandlers(new VertxTestServiceGrpcServer.TestServiceApi() {
                     @Override
                     public Future<EmptyProtos.Empty> emptyCall(EmptyProtos.Empty request) {
                         return Future.failedFuture("Not yet implemented");
@@ -48,7 +47,6 @@ public class GoogleTest {
 
                     @Override
                     public Future<Messages.SimpleResponse> unaryCall(Messages.SimpleRequest request) {
-                        LOG.info("Request received " + request);
                         return Future.succeededFuture(
                                 Messages.SimpleResponse.newBuilder()
                                         .setUsername("FooBar")
@@ -74,7 +72,6 @@ public class GoogleTest {
 
                     @Override
                     public void streamingOutputCall(GrpcServerRequest<Messages.StreamingOutputCallRequest, Messages.StreamingOutputCallResponse> request) {
-                        request.handler(req -> LOG.info("Request received " + req));
                         request.endHandler($ -> {
                             request.response().write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
@@ -88,7 +85,6 @@ public class GoogleTest {
 
                     @Override
                     public void fullDuplexCall(GrpcServerRequest<Messages.StreamingOutputCallRequest, Messages.StreamingOutputCallResponse> request) {
-                        request.handler(req -> LOG.info("Request received " + req));
                         request.endHandler($ -> {
                             request.response().write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
@@ -110,6 +106,8 @@ public class GoogleTest {
                 .listen(port)
                 .onSuccess($ -> should.completeNow())
                 .onFailure(should::failNow);
+
+        // Create gRPC Client
         client = new VertxTestServiceGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
     }
 
@@ -118,7 +116,7 @@ public class GoogleTest {
         client.unaryCall(Messages.SimpleRequest.newBuilder()
                         .setFillUsername(true)
                         .build())
-                .onSuccess(reply -> LOG.info("Reply received " + reply))
+                .onSuccess(reply -> Assertions.assertEquals("FooBar", reply.getUsername()))
                 .onSuccess(reply -> should.completeNow())
                 .onFailure(should::failNow);
     }
@@ -135,7 +133,7 @@ public class GoogleTest {
                     req.end();
                     return req.response().compose(GrpcReadStream::last);
                 })
-                .onSuccess(reply -> LOG.info("Reply received " + reply))
+                .onSuccess(reply -> Assertions.assertEquals(2, reply.getAggregatedPayloadSize()))
                 .onSuccess(reply -> should.completeNow())
                 .onFailure(should::failNow);
     }
@@ -149,8 +147,12 @@ public class GoogleTest {
                     return req.response();
                 })
                 .onSuccess(response -> {
-                    response.handler(reply -> LOG.info("Reply received " + reply));
-                    response.endHandler($ -> should.completeNow());
+                    List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
+                    response.handler(list::add);
+                    response.endHandler($ -> {
+                        Assertions.assertEquals(2, list.size());
+                        should.completeNow();
+                    });
                     response.exceptionHandler(should::failNow);
                 });
     }
@@ -168,8 +170,12 @@ public class GoogleTest {
                     return req.response();
                 })
                 .onSuccess(response -> {
-                    response.handler(reply -> LOG.info("Reply received " + reply));
-                    response.endHandler($ -> should.completeNow());
+                    List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
+                    response.handler(list::add);
+                    response.endHandler($ -> {
+                        Assertions.assertEquals(2, list.size());
+                        should.completeNow();
+                    });
                     response.exceptionHandler(should::failNow);
                 });
     }

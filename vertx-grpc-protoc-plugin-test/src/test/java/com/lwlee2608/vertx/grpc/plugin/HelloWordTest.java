@@ -5,15 +5,13 @@ import io.grpc.examples.helloworld.HelloReply;
 import io.grpc.examples.helloworld.HelloRequest;
 import io.grpc.examples.helloworld.VertxGreeterGrpcClient;
 import io.grpc.examples.helloworld.VertxGreeterGrpcServer;
-import io.grpc.examples.helloworld.VertxGreeterGrpcServerApi;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.impl.logging.Logger;
-import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -25,7 +23,6 @@ import java.net.ServerSocket;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
 public class HelloWordTest {
-    private static final Logger LOG = LoggerFactory.getLogger(HelloWordTest.class);
 
     VertxGreeterGrpcClient client;
     int port;
@@ -33,8 +30,10 @@ public class HelloWordTest {
     @BeforeAll
     public void init(Vertx vertx, VertxTestContext should) throws IOException {
         port = getFreePort();
+
+        // Create gRPC Server
         VertxGreeterGrpcServer server = new VertxGreeterGrpcServer(vertx)
-                .callHandlers(new VertxGreeterGrpcServerApi() {
+                .callHandlers(new VertxGreeterGrpcServer.GreeterApi() {
                     @Override
                     public Future<HelloReply> sayHello(HelloRequest request) {
                         return Future.succeededFuture(
@@ -48,15 +47,17 @@ public class HelloWordTest {
                 .listen(port)
                 .onSuccess($ -> should.completeNow())
                 .onFailure(should::failNow);
+
+        // Create gRPC Client
         client = new VertxGreeterGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
     }
 
     @Test
     void testServerClient(Vertx vertx, VertxTestContext should) {
         client.sayHello(HelloRequest.newBuilder()
-                .setName("Hello")
-                .build())
-                .onSuccess(helloReply -> LOG.info("Reply received"))
+                        .setName("Hello")
+                        .build())
+                .onSuccess(helloReply -> Assertions.assertEquals("Hello World", helloReply.getMessage()))
                 .onSuccess(helloReply -> should.completeNow())
                 .onFailure(should::failNow);
     }

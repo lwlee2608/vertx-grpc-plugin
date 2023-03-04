@@ -19,19 +19,24 @@ public class {{className}}  {
         this.server = GrpcServer.server(vertx);
     }
 
-    public {{className}} callHandlers(Vertx{{serviceName}}GrpcServerApi implementation) {
+    public interface {{serviceName}}Api {
+{{#unaryMethods}}
+        Future<{{outputType}}> {{methodName}}({{inputType}} request);
+{{/unaryMethods}}
+{{#streamMethods}}
+        void {{methodName}}(GrpcServerRequest<{{inputType}}, {{outputType}}> request);
+{{/streamMethods}}
+    }
+
+    public {{className}} callHandlers({{serviceName}}Api implementation) {
 {{#unaryMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->
                 request.handler(req -> implementation.{{methodName}}(req)
                     .onSuccess(resp -> request.response().end(resp))
                 ));
-
 {{/unaryMethods}}
 {{#streamMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
-                implementation.{{methodName}}(request);
-        });
-
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> implementation.{{methodName}}(request));
 {{/streamMethods}}
         return this;
     }

@@ -8,7 +8,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.grpc.client.GrpcClient;
 import io.vertx.grpc.client.GrpcClientRequest;
 
-public class {{className}} implements Vertx{{serviceName}}GrpcClientApi {
+public class {{className}} {
     private final GrpcClient client;
     private final SocketAddress socketAddress;
 
@@ -18,7 +18,6 @@ public class {{className}} implements Vertx{{serviceName}}GrpcClientApi {
     }
 
 {{#unaryMethods}}
-    @Override
     public Future<{{outputType}}> {{methodName}}({{inputType}} request) {
         return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
             req.end(request);
@@ -28,7 +27,6 @@ public class {{className}} implements Vertx{{serviceName}}GrpcClientApi {
 
 {{/unaryMethods}}
 {{#streamMethods}}
-    @Override
     public Future<GrpcClientRequest<{{inputType}}, {{outputType}}>> {{methodName}}() {
         return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}());
     }
