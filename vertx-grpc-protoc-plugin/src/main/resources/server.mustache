@@ -1,0 +1,43 @@
+{{#packageName}}
+package {{packageName}};
+{{/packageName}}
+
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.grpc.server.GrpcServer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class {{className}}  {
+    private final GrpcServer server;
+
+    public {{className}}(Vertx vertx) {
+        this.server = GrpcServer.server(vertx);
+    }
+
+    public {{className}} callHandlers(Vertx{{serviceName}}GrpcApi implementation) {
+{{#unaryUnaryMethods}}
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->
+                request.handler(req -> implementation.{{methodName}}(req)
+                    .onSuccess(resp -> request.response().end(resp))
+                ));
+
+{{/unaryUnaryMethods}}
+{{#manyUnaryMethods}}
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
+            List<{{inputType}}> list = new ArrayList<>();
+            request.handler(req -> list.add(req));
+            request.endHandler($ -> implementation.{{methodName}}(list.iterator())
+                    .onSuccess(resp -> request.response().end(resp)));
+        });
+
+{{/manyUnaryMethods}}
+    return this;
+    }
+
+    public Handler<HttpServerRequest> getGrpcServer() {
+        return server;
+    }
+}

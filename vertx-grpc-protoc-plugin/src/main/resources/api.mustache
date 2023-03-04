@@ -1,0 +1,12 @@
+{{#packageName}}
+package {{packageName}};
+{{/packageName}}
+
+public interface {{className}} {
+{{#unaryUnaryMethods}}
+    io.vertx.core.Future<{{outputType}}> {{methodName}}({{inputType}} request);
+{{/unaryUnaryMethods}}
+{{#manyUnaryMethods}}
+    io.vertx.core.Future<{{outputType}}> {{methodName}}(java.util.Iterator<{{inputType}}> requests);
+{{/manyUnaryMethods}}
+}
