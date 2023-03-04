@@ -1,0 +1,16 @@
+{{#packageName}}
+package {{packageName}};
+{{/packageName}}
+
+import io.vertx.core.Future;
+import io.vertx.grpc.server.GrpcServerRequest;
+
+public interface {{className}} {
+{{#unaryUnaryMethods}}
+    Future<{{outputType}}> {{methodName}}({{inputType}} request);
+{{/unaryUnaryMethods}}
+{{#manyUnaryMethods}}
+    void {{methodName}}(GrpcServerRequest<{{inputType}}, {{outputType}}> request);
+{{/manyUnaryMethods}}
+}
+

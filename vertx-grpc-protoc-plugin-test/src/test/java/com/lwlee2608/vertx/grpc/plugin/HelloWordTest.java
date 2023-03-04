@@ -3,9 +3,9 @@ package com.lwlee2608.vertx.grpc.plugin;
 
 import io.grpc.examples.helloworld.HelloReply;
 import io.grpc.examples.helloworld.HelloRequest;
-import io.grpc.examples.helloworld.VertxGreeterGrpcApi;
 import io.grpc.examples.helloworld.VertxGreeterGrpcClient;
 import io.grpc.examples.helloworld.VertxGreeterGrpcServer;
+import io.grpc.examples.helloworld.VertxGreeterGrpcServerApi;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -33,7 +33,7 @@ public class HelloWordTest {
     public void init(Vertx vertx, VertxTestContext should) throws IOException {
         port = getFreePort();
         VertxGreeterGrpcServer server = new VertxGreeterGrpcServer(vertx)
-                .callHandlers(new VertxGreeterGrpcApi() {
+                .callHandlers(new VertxGreeterGrpcServerApi() {
                     @Override
                     public Future<HelloReply> sayHello(HelloRequest request) {
                         return Future.succeededFuture(

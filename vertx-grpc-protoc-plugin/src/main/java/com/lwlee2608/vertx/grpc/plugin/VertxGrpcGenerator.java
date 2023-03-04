@@ -263,15 +263,16 @@ public class VertxGrpcGenerator extends Generator {
     }
 
     private List<PluginProtos.CodeGeneratorResponse.File> buildFiles(ServiceContext context) {
-        return List.of(buildApiFile(context),
-                buildServerFile(context),
-                buildClientFile(context));
+        return List.of(buildClientApiFile(context),
+                buildServerApiFile(context),
+                buildClientFile(context),
+                buildServerFile(context));
     }
 
-    private PluginProtos.CodeGeneratorResponse.File buildApiFile(ServiceContext context) {
-        context.fileName = CLASS_PREFIX + context.serviceName + "GrpcApi.java";
-        context.className = CLASS_PREFIX + context.serviceName + "GrpcApi";
-        String content = applyTemplate("api.mustache", context);
+    private PluginProtos.CodeGeneratorResponse.File buildClientApiFile(ServiceContext context) {
+        context.fileName = CLASS_PREFIX + context.serviceName + "GrpcClientApi.java";
+        context.className = CLASS_PREFIX + context.serviceName + "GrpcClientApi";
+        String content = applyTemplate("clientApi.mustache", context);
         return PluginProtos.CodeGeneratorResponse.File
                 .newBuilder()
                 .setName(absoluteFileName(context))
@@ -283,6 +284,17 @@ public class VertxGrpcGenerator extends Generator {
         context.fileName = CLASS_PREFIX + context.serviceName + "GrpcClient.java";
         context.className = CLASS_PREFIX + context.serviceName + "GrpcClient";
         String content = applyTemplate("client.mustache", context);
+        return PluginProtos.CodeGeneratorResponse.File
+                .newBuilder()
+                .setName(absoluteFileName(context))
+                .setContent(content)
+                .build();
+    }
+
+    private PluginProtos.CodeGeneratorResponse.File buildServerApiFile(ServiceContext context) {
+        context.fileName = CLASS_PREFIX + context.serviceName + "GrpcServerApi.java";
+        context.className = CLASS_PREFIX + context.serviceName + "GrpcServerApi";
+        String content = applyTemplate("serverApi.mustache", context);
         return PluginProtos.CodeGeneratorResponse.File
                 .newBuilder()
                 .setName(absoluteFileName(context))
