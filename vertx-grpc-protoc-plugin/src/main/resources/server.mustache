@@ -20,19 +20,19 @@ public class {{className}}  {
     }
 
     public {{className}} callHandlers(Vertx{{serviceName}}GrpcServerApi implementation) {
-{{#unaryUnaryMethods}}
+{{#unaryMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->
                 request.handler(req -> implementation.{{methodName}}(req)
                     .onSuccess(resp -> request.response().end(resp))
                 ));
 
-{{/unaryUnaryMethods}}
-{{#manyUnaryMethods}}
+{{/unaryMethods}}
+{{#streamMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
                 implementation.{{methodName}}(request);
         });
 
-{{/manyUnaryMethods}}
+{{/streamMethods}}
         return this;
     }
 

@@ -6,10 +6,10 @@ import io.vertx.core.Future;
 import io.vertx.grpc.client.GrpcClientRequest;
 
 public interface {{className}} {
-{{#unaryUnaryMethods}}
+{{#unaryMethods}}
     Future<{{outputType}}> {{methodName}}({{inputType}} request);
-{{/unaryUnaryMethods}}
-{{#manyUnaryMethods}}
+{{/unaryMethods}}
+{{#streamMethods}}
     Future<GrpcClientRequest<{{inputType}}, {{outputType}}>> {{methodName}}();
-{{/manyUnaryMethods}}
+{{/streamMethods}}
 }

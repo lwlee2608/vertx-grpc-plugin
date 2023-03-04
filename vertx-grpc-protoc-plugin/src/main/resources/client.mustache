@@ -17,7 +17,7 @@ public class {{className}} implements Vertx{{serviceName}}GrpcClientApi {
         this.socketAddress = socketAddress;
     }
 
-{{#unaryUnaryMethods}}
+{{#unaryMethods}}
     @Override
     public Future<{{outputType}}> {{methodName}}({{inputType}} request) {
         return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
@@ -26,12 +26,12 @@ public class {{className}} implements Vertx{{serviceName}}GrpcClientApi {
         });
     }
 
-{{/unaryUnaryMethods}}
-{{#manyUnaryMethods}}
+{{/unaryMethods}}
+{{#streamMethods}}
     @Override
     public Future<GrpcClientRequest<{{inputType}}, {{outputType}}>> {{methodName}}() {
         return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}());
     }
 
-{{/manyUnaryMethods}}
+{{/streamMethods}}
 }

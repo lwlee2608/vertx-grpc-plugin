@@ -27,6 +27,7 @@ import java.net.ServerSocket;
 public class HelloWordTest {
     private static final Logger LOG = LoggerFactory.getLogger(HelloWordTest.class);
 
+    VertxGreeterGrpcClient client;
     int port;
 
     @BeforeAll
@@ -47,11 +48,11 @@ public class HelloWordTest {
                 .listen(port)
                 .onSuccess($ -> should.completeNow())
                 .onFailure(should::failNow);
+        client = new VertxGreeterGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
     }
 
     @Test
     void testServerClient(Vertx vertx, VertxTestContext should) {
-        VertxGreeterGrpcClient client = new VertxGreeterGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
         client.sayHello(HelloRequest.newBuilder()
                 .setName("Hello")
                 .build())

@@ -355,20 +355,12 @@ public class VertxGrpcGenerator extends Generator {
         public String javaDoc;
         public final List<MethodContext> methods = new ArrayList<>();
 
-        public List<MethodContext> unaryUnaryMethods() {
+        public List<MethodContext> streamMethods() {
+            return methods.stream().filter(m -> m.isManyInput || m.isManyOutput).collect(Collectors.toList());
+        }
+
+        public List<MethodContext> unaryMethods() {
             return methods.stream().filter(m -> !m.isManyInput && !m.isManyOutput).collect(Collectors.toList());
-        }
-
-        public List<MethodContext> unaryManyMethods() {
-            return methods.stream().filter(m -> !m.isManyInput && m.isManyOutput).collect(Collectors.toList());
-        }
-
-        public List<MethodContext> manyUnaryMethods() {
-            return methods.stream().filter(m -> m.isManyInput && !m.isManyOutput).collect(Collectors.toList());
-        }
-
-        public List<MethodContext> manyManyMethods() {
-            return methods.stream().filter(m -> m.isManyInput && m.isManyOutput).collect(Collectors.toList());
         }
     }
 
