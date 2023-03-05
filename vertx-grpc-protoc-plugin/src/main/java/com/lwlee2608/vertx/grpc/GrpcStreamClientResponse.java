@@ -1,4 +1,4 @@
-package com.lwlee2608.vertx.grpc.plugin;
+package com.lwlee2608.vertx.grpc;
 
 
 import io.vertx.core.Handler;
