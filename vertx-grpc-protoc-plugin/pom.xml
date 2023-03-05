@@ -12,11 +12,7 @@
     <dependencies>
         <dependency>
             <groupId>io.vertx</groupId>
-            <artifactId>vertx-grpc-server</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-grpc-client</artifactId>
+            <artifactId>vertx-grpc-common</artifactId>
         </dependency>
 
         <dependency>
