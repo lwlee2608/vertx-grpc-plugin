@@ -337,6 +337,18 @@ public class VertxGrpcGenerator extends Generator {
         public List<MethodContext> unaryMethods() {
             return methods.stream().filter(m -> !m.isManyInput && !m.isManyOutput).collect(Collectors.toList());
         }
+
+        public List<MethodContext> unaryManyMethods() {
+            return methods.stream().filter(m -> !m.isManyInput && m.isManyOutput).collect(Collectors.toList());
+        }
+
+        public List<MethodContext> manyUnaryMethods() {
+            return methods.stream().filter(m -> m.isManyInput && !m.isManyOutput).collect(Collectors.toList());
+        }
+
+        public List<MethodContext> manyManyMethods() {
+            return methods.stream().filter(m -> m.isManyInput && m.isManyOutput).collect(Collectors.toList());
+        }
     }
 
     /**
