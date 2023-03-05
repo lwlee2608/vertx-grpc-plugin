@@ -132,7 +132,7 @@ public class GoogleTest {
 
     @Test
     void testManyUnary(VertxTestContext should) {
-        client.streamingInputCall().compose(req -> {
+        client.streamingInputCall(req -> {
                     req.write(Messages.StreamingInputCallRequest.newBuilder()
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-1", StandardCharsets.UTF_8)).build())
                             .build());
@@ -140,7 +140,6 @@ public class GoogleTest {
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-2", StandardCharsets.UTF_8)).build())
                             .build());
                     req.end();
-                    return req.response().compose(GrpcReadStream::last);
                 })
                 .onSuccess(reply -> Assertions.assertEquals(2, reply.getAggregatedPayloadSize()))
                 .onSuccess(reply -> should.completeNow())
@@ -149,12 +148,10 @@ public class GoogleTest {
 
     @Test
     void testUnaryMany(VertxTestContext should) {
-        client.streamingOutputCall().compose(req -> {
-                    req.end(Messages.StreamingOutputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)).build())
-                            .build());
-                    return req.response();
-                })
+        Messages.StreamingOutputCallRequest request = Messages.StreamingOutputCallRequest.newBuilder()
+                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)).build())
+                .build();
+        client.streamingOutputCall(request)
                 .onSuccess(response -> {
                     List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
                     response.handler(list::add);
@@ -168,7 +165,7 @@ public class GoogleTest {
 
     @Test
     void testManyMany(VertxTestContext should) {
-        client.fullDuplexCall().compose(req -> {
+        client.fullDuplexCall(req -> {
                     req.write(Messages.StreamingOutputCallRequest.newBuilder()
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8)).build())
                             .build());
@@ -176,7 +173,6 @@ public class GoogleTest {
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8)).build())
                             .build());
                     req.end();
-                    return req.response();
                 })
                 .onSuccess(response -> {
                     List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
