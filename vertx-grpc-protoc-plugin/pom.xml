@@ -11,11 +11,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-grpc-common</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.salesforce.servicelibs</groupId>
             <artifactId>jprotoc</artifactId>
             <version>${jprotoc.version}</version>

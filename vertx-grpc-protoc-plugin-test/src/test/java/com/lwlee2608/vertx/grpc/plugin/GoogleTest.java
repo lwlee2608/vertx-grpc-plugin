@@ -3,8 +3,6 @@ package com.lwlee2608.vertx.grpc.plugin;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.EmptyProtos;
-import com.lwlee2608.vertx.grpc.GrpcStreamServerRequest;
-import com.lwlee2608.vertx.grpc.GrpcStreamServerResponse;
 import io.grpc.testing.integration.Messages;
 import io.grpc.testing.integration.VertxTestServiceGrpcClient;
 import io.grpc.testing.integration.VertxTestServiceGrpcServer;
@@ -13,6 +11,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.net.SocketAddress;
+import io.vertx.grpc.common.GrpcReadStream;
+import io.vertx.grpc.common.GrpcWriteStream;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.junit.jupiter.api.Assertions;
@@ -64,7 +64,7 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingInputCall(stream StreamingInputCallRequest) returns (StreamingInputCallResponse);
                     @Override
-                    public Future<Messages.StreamingInputCallResponse> streamingInputCall(GrpcStreamServerRequest<Messages.StreamingInputCallRequest> request) {
+                    public Future<Messages.StreamingInputCallResponse> streamingInputCall(GrpcReadStream<Messages.StreamingInputCallRequest> request) {
                         Promise<Messages.StreamingInputCallResponse> promise = Promise.promise();
                         List<Messages.StreamingInputCallRequest> list = new ArrayList<>();
                         request.handler(list::add);
@@ -80,7 +80,7 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingOutputCall(StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public void streamingOutputCall(Messages.StreamingOutputCallRequest request, GrpcStreamServerResponse<Messages.StreamingOutputCallResponse> response) {
+                    public void streamingOutputCall(Messages.StreamingOutputCallRequest request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
                         response.write(Messages.StreamingOutputCallResponse.newBuilder()
                                 .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
                                 .build());
@@ -93,7 +93,7 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public void fullDuplexCall(GrpcStreamServerRequest<Messages.StreamingOutputCallRequest> request, GrpcStreamServerResponse<Messages.StreamingOutputCallResponse> response) {
+                    public void fullDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
                         request.endHandler($ -> {
                             response.write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
@@ -106,7 +106,7 @@ public class GoogleTest {
                     }
 
                     @Override
-                    public void halfDuplexCall(GrpcStreamServerRequest<Messages.StreamingOutputCallRequest> request, GrpcStreamServerResponse<Messages.StreamingOutputCallResponse> response) {
+                    public void halfDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
                     }
                 });
 

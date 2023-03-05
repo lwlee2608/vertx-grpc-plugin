@@ -6,10 +6,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.grpc.common.GrpcReadStream;
+import io.vertx.grpc.common.GrpcWriteStream;
 import io.vertx.grpc.server.GrpcServer;
-import io.vertx.grpc.server.GrpcServerRequest;
-import com.lwlee2608.vertx.grpc.GrpcStreamServerRequest;
-import com.lwlee2608.vertx.grpc.GrpcStreamServerResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,13 +25,13 @@ public class {{className}}  {
         Future<{{outputType}}> {{methodName}}({{inputType}} request);
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-        void {{methodName}}({{inputType}} request, GrpcStreamServerResponse<{{outputType}}> response);
+        void {{methodName}}({{inputType}} request, GrpcWriteStream<{{outputType}}> response);
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
-        Future<{{outputType}}> {{methodName}}(GrpcStreamServerRequest<{{inputType}}> request);
+        Future<{{outputType}}> {{methodName}}(GrpcReadStream<{{inputType}}> request);
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
-        void {{methodName}}(GrpcStreamServerRequest<{{inputType}}> request, GrpcStreamServerResponse<{{outputType}}> response);
+        void {{methodName}}(GrpcReadStream<{{inputType}}> request, GrpcWriteStream<{{outputType}}> response);
 {{/manyManyMethods}}
     }
 
@@ -44,13 +43,13 @@ public class {{className}}  {
                 ));
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->request.handler(req -> implementation.{{methodName}}(req, new GrpcStreamServerResponse<>(request.response()))));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->request.handler(req -> implementation.{{methodName}}(req, request.response())));
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->implementation.{{methodName}}(new GrpcStreamServerRequest<>(request)).onSuccess(resp -> request.response().end(resp)));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->implementation.{{methodName}}(request).onSuccess(resp -> request.response().end(resp)));
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->implementation.{{methodName}}(new GrpcStreamServerRequest<>(request), new GrpcStreamServerResponse<>(request.response())));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->implementation.{{methodName}}(request, request.response()));
 {{/manyManyMethods}}
         return this;
     }
