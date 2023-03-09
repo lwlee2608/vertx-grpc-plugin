@@ -6,8 +6,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.grpc.common.GrpcReadStream;
-import io.vertx.grpc.common.GrpcWriteStream;
+import io.vertx.core.streams.ReadStream;
+import io.vertx.core.streams.WriteStream;
 import io.vertx.grpc.server.GrpcServer;
 
 import java.util.ArrayList;
@@ -26,13 +26,13 @@ public class {{className}}  {
         Future<{{outputType}}> {{methodName}}({{inputType}} request);
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-        Consumer<GrpcWriteStream<{{outputType}}>> {{methodName}}({{inputType}} request);
+        Consumer<WriteStream<{{outputType}}>> {{methodName}}({{inputType}} request);
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
-        Future<{{outputType}}> {{methodName}}(GrpcReadStream<{{inputType}}> request);
+        Future<{{outputType}}> {{methodName}}(ReadStream<{{inputType}}> request);
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
-        Consumer<GrpcWriteStream<{{outputType}}>> {{methodName}}(GrpcReadStream<{{inputType}}> request);
+        Consumer<WriteStream<{{outputType}}>> {{methodName}}(ReadStream<{{inputType}}> request);
 {{/manyManyMethods}}
     }
 

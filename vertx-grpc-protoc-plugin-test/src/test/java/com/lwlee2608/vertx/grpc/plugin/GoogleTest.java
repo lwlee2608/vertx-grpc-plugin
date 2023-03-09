@@ -11,8 +11,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.net.SocketAddress;
-import io.vertx.grpc.common.GrpcReadStream;
-import io.vertx.grpc.common.GrpcWriteStream;
+import io.vertx.core.streams.ReadStream;
+import io.vertx.core.streams.WriteStream;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.junit.jupiter.api.Assertions;
@@ -65,7 +65,7 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingInputCall(stream StreamingInputCallRequest) returns (StreamingInputCallResponse);
                     @Override
-                    public Future<Messages.StreamingInputCallResponse> streamingInputCall(GrpcReadStream<Messages.StreamingInputCallRequest> request) {
+                    public Future<Messages.StreamingInputCallResponse> streamingInputCall(ReadStream<Messages.StreamingInputCallRequest> request) {
                         Promise<Messages.StreamingInputCallResponse> promise = Promise.promise();
                         List<Messages.StreamingInputCallRequest> list = new ArrayList<>();
                         request.handler(list::add);
@@ -81,7 +81,7 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingOutputCall(StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public Consumer<GrpcWriteStream<Messages.StreamingOutputCallResponse>> streamingOutputCall(io.grpc.testing.integration.Messages.StreamingOutputCallRequest request) {
+                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> streamingOutputCall(io.grpc.testing.integration.Messages.StreamingOutputCallRequest request) {
                          return response -> {
                             response.write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
@@ -96,7 +96,7 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public Consumer<GrpcWriteStream<Messages.StreamingOutputCallResponse>> fullDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request) {
+                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> fullDuplexCall(ReadStream<Messages.StreamingOutputCallRequest> request) {
                         return response -> {
                             request.endHandler($ -> {
                                 response.write(Messages.StreamingOutputCallResponse.newBuilder()
@@ -111,7 +111,7 @@ public class GoogleTest {
                     }
 
                     @Override
-                    public Consumer<GrpcWriteStream<Messages.StreamingOutputCallResponse>> halfDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request) {
+                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> halfDuplexCall(ReadStream<Messages.StreamingOutputCallRequest> request) {
                         return response -> {};
                     }
                 });
