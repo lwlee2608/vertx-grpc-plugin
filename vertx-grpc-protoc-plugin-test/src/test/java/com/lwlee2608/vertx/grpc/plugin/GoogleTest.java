@@ -26,6 +26,7 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
@@ -80,21 +81,8 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingOutputCall(StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public void streamingOutputCall(Messages.StreamingOutputCallRequest request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
-                        response.write(Messages.StreamingOutputCallResponse.newBuilder()
-                                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
-                                .build());
-                        response.write(Messages.StreamingOutputCallResponse.newBuilder()
-                                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
-                                .build());
-                        response.end();
-                    }
-
-                    // Implement following RPC defined in test.proto:
-                    //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
-                    @Override
-                    public void fullDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
-                        request.endHandler($ -> {
+                    public Consumer<GrpcWriteStream<Messages.StreamingOutputCallResponse>> streamingOutputCall(io.grpc.testing.integration.Messages.StreamingOutputCallRequest request) {
+                         return response -> {
                             response.write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
                                     .build());
@@ -102,11 +90,29 @@ public class GoogleTest {
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
                                     .build());
                             response.end();
-                        });
+                        };
+                    }
+
+                    // Implement following RPC defined in test.proto:
+                    //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
+                    @Override
+                    public Consumer<GrpcWriteStream<Messages.StreamingOutputCallResponse>> fullDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request) {
+                        return response -> {
+                            request.endHandler($ -> {
+                                response.write(Messages.StreamingOutputCallResponse.newBuilder()
+                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
+                                        .build());
+                                response.write(Messages.StreamingOutputCallResponse.newBuilder()
+                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
+                                        .build());
+                                response.end();
+                            });
+                        };
                     }
 
                     @Override
-                    public void halfDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
+                    public Consumer<GrpcWriteStream<Messages.StreamingOutputCallResponse>> halfDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request) {
+                        return response -> {};
                     }
                 });
 

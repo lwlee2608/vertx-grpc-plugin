@@ -12,6 +12,7 @@ import io.vertx.grpc.server.GrpcServer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class {{className}}  {
     private final GrpcServer server;
@@ -25,13 +26,13 @@ public class {{className}}  {
         Future<{{outputType}}> {{methodName}}({{inputType}} request);
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-        void {{methodName}}({{inputType}} request, GrpcWriteStream<{{outputType}}> response);
+        Consumer<GrpcWriteStream<{{outputType}}>> {{methodName}}({{inputType}} request);
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
         Future<{{outputType}}> {{methodName}}(GrpcReadStream<{{inputType}}> request);
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
-        void {{methodName}}(GrpcReadStream<{{inputType}}> request, GrpcWriteStream<{{outputType}}> response);
+        Consumer<GrpcWriteStream<{{outputType}}>> {{methodName}}(GrpcReadStream<{{inputType}}> request);
 {{/manyManyMethods}}
     }
 
@@ -43,13 +44,13 @@ public class {{className}}  {
                 ));
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->request.handler(req -> implementation.{{methodName}}(req, request.response())));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> request.handler(req -> implementation.{{methodName}}(req).accept(request.response())));
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->implementation.{{methodName}}(request).onSuccess(resp -> request.response().end(resp)));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> implementation.{{methodName}}(request).onSuccess(resp -> request.response().end(resp)));
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->implementation.{{methodName}}(request, request.response()));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> implementation.{{methodName}}(request).accept(request.response()));
 {{/manyManyMethods}}
         return this;
     }
