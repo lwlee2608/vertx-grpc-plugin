@@ -81,7 +81,7 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingOutputCall(StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> streamingOutputCall(io.grpc.testing.integration.Messages.StreamingOutputCallRequest request) {
+                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> streamingOutputCall(Messages.StreamingOutputCallRequest request) {
                          return response -> {
                             response.write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
