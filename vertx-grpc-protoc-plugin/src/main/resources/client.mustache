@@ -6,7 +6,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.grpc.client.GrpcClient;
-import io.vertx.grpc.client.GrpcClientRequest;
+import io.vertx.grpc.common.GrpcReadStream;
+import io.vertx.grpc.common.GrpcWriteStream;
+
+import java.util.function.Consumer;
 
 public class {{className}} {
     private final GrpcClient client;
@@ -26,10 +29,31 @@ public class {{className}} {
     }
 
 {{/unaryMethods}}
-{{#streamMethods}}
-    public Future<GrpcClientRequest<{{inputType}}, {{outputType}}>> {{methodName}}() {
-        return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}());
+{{#unaryManyMethods}}
+    public Future<GrpcReadStream<{{outputType}}>> {{methodName}}({{inputType}} request) {
+        return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
+            req.end(request);
+            return req.response().map(resp -> resp);
+        });
     }
 
-{{/streamMethods}}
+{{/unaryManyMethods}}
+{{#manyUnaryMethods}}
+    public Future<{{outputType}}> {{methodName}}(Consumer<GrpcWriteStream<{{inputType}}>> request) {
+        return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
+            request.accept(req);
+            return req.response().compose(resp -> resp.last());
+        });
+    }
+
+{{/manyUnaryMethods}}
+{{#manyManyMethods}}
+    public Future<GrpcReadStream<{{outputType}}>> {{methodName}}(Consumer<GrpcWriteStream<{{inputType}}>> request) {
+        return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
+            request.accept(req);
+            return req.response().map(resp -> resp);
+        });
+    }
+
+{{/manyManyMethods}}
 }

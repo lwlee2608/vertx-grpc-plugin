@@ -7,11 +7,12 @@ import io.grpc.testing.integration.Messages;
 import io.grpc.testing.integration.VertxTestServiceGrpcClient;
 import io.grpc.testing.integration.VertxTestServiceGrpcServer;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.grpc.common.GrpcReadStream;
-import io.vertx.grpc.server.GrpcServerRequest;
+import io.vertx.grpc.common.GrpcWriteStream;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.junit.jupiter.api.Assertions;
@@ -45,6 +46,8 @@ public class GoogleTest {
                         return Future.failedFuture("Not yet implemented");
                     }
 
+                    // Implement following RPC defined in test.proto:
+                    //     rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
                     @Override
                     public Future<Messages.SimpleResponse> unaryCall(Messages.SimpleRequest request) {
                         return Future.succeededFuture(
@@ -58,46 +61,52 @@ public class GoogleTest {
                         return Future.failedFuture("Not yet implemented");
                     }
 
+                    // Implement following RPC defined in test.proto:
+                    //     rpc StreamingInputCall(stream StreamingInputCallRequest) returns (StreamingInputCallResponse);
                     @Override
-                    public void streamingInputCall(GrpcServerRequest<Messages.StreamingInputCallRequest, Messages.StreamingInputCallResponse> request) {
+                    public Future<Messages.StreamingInputCallResponse> streamingInputCall(GrpcReadStream<Messages.StreamingInputCallRequest> request) {
+                        Promise<Messages.StreamingInputCallResponse> promise = Promise.promise();
                         List<Messages.StreamingInputCallRequest> list = new ArrayList<>();
                         request.handler(list::add);
                         request.endHandler($ -> {
                             Messages.StreamingInputCallResponse resp = Messages.StreamingInputCallResponse.newBuilder()
                                     .setAggregatedPayloadSize(list.size())
                                     .build();
-                            request.response().end(resp);
+                            promise.complete(resp);
                         });
+                        return promise.future();
                     }
 
+                    // Implement following RPC defined in test.proto:
+                    //     rpc StreamingOutputCall(StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public void streamingOutputCall(GrpcServerRequest<Messages.StreamingOutputCallRequest, Messages.StreamingOutputCallResponse> request) {
+                    public void streamingOutputCall(Messages.StreamingOutputCallRequest request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
+                        response.write(Messages.StreamingOutputCallResponse.newBuilder()
+                                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
+                                .build());
+                        response.write(Messages.StreamingOutputCallResponse.newBuilder()
+                                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
+                                .build());
+                        response.end();
+                    }
+
+                    // Implement following RPC defined in test.proto:
+                    //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
+                    @Override
+                    public void fullDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
                         request.endHandler($ -> {
-                            request.response().write(Messages.StreamingOutputCallResponse.newBuilder()
+                            response.write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
                                     .build());
-                            request.response().write(Messages.StreamingOutputCallResponse.newBuilder()
+                            response.write(Messages.StreamingOutputCallResponse.newBuilder()
                                     .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
                                     .build());
-                            request.response().end();
+                            response.end();
                         });
                     }
 
                     @Override
-                    public void fullDuplexCall(GrpcServerRequest<Messages.StreamingOutputCallRequest, Messages.StreamingOutputCallResponse> request) {
-                        request.endHandler($ -> {
-                            request.response().write(Messages.StreamingOutputCallResponse.newBuilder()
-                                    .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
-                                    .build());
-                            request.response().write(Messages.StreamingOutputCallResponse.newBuilder()
-                                    .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
-                                    .build());
-                            request.response().end();
-                        });
-                    }
-
-                    @Override
-                    public void halfDuplexCall(GrpcServerRequest<Messages.StreamingOutputCallRequest, Messages.StreamingOutputCallResponse> request) {
+                    public void halfDuplexCall(GrpcReadStream<Messages.StreamingOutputCallRequest> request, GrpcWriteStream<Messages.StreamingOutputCallResponse> response) {
                     }
                 });
 
@@ -123,7 +132,7 @@ public class GoogleTest {
 
     @Test
     void testManyUnary(VertxTestContext should) {
-        client.streamingInputCall().compose(req -> {
+        client.streamingInputCall(req -> {
                     req.write(Messages.StreamingInputCallRequest.newBuilder()
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-1", StandardCharsets.UTF_8)).build())
                             .build());
@@ -131,7 +140,6 @@ public class GoogleTest {
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-2", StandardCharsets.UTF_8)).build())
                             .build());
                     req.end();
-                    return req.response().compose(GrpcReadStream::last);
                 })
                 .onSuccess(reply -> Assertions.assertEquals(2, reply.getAggregatedPayloadSize()))
                 .onSuccess(reply -> should.completeNow())
@@ -140,12 +148,10 @@ public class GoogleTest {
 
     @Test
     void testUnaryMany(VertxTestContext should) {
-        client.streamingOutputCall().compose(req -> {
-                    req.end(Messages.StreamingOutputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)).build())
-                            .build());
-                    return req.response();
-                })
+        Messages.StreamingOutputCallRequest request = Messages.StreamingOutputCallRequest.newBuilder()
+                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)).build())
+                .build();
+        client.streamingOutputCall(request)
                 .onSuccess(response -> {
                     List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
                     response.handler(list::add);
@@ -159,7 +165,7 @@ public class GoogleTest {
 
     @Test
     void testManyMany(VertxTestContext should) {
-        client.fullDuplexCall().compose(req -> {
+        client.fullDuplexCall(req -> {
                     req.write(Messages.StreamingOutputCallRequest.newBuilder()
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8)).build())
                             .build());
@@ -167,7 +173,6 @@ public class GoogleTest {
                             .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8)).build())
                             .build());
                     req.end();
-                    return req.response();
                 })
                 .onSuccess(response -> {
                     List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
