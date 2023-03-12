@@ -2,6 +2,8 @@
 package {{packageName}};
 {{/packageName}}
 
+import io.reactivex.Observable;
+import io.reactivex.Single;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -23,13 +25,13 @@ public class {{className}}  {
 
     public interface {{serviceName}}Api {
 {{#unaryMethods}}
-        Future<{{outputType}}> {{methodName}}({{inputType}} request);
+        Single<{{outputType}}> {{methodName}}({{inputType}} request);
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-        Consumer<WriteStream<{{outputType}}>> {{methodName}}({{inputType}} request);
+        Observable<{{outputType}}> {{methodName}}({{inputType}} request);
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
-        Future<{{outputType}}> {{methodName}}(ReadStream<{{inputType}}> request);
+        Single<{{outputType}}> {{methodName}}(Observable<{{inputType}}> request);
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
         Consumer<WriteStream<{{outputType}}>> {{methodName}}(ReadStream<{{inputType}}> request);
@@ -40,14 +42,25 @@ public class {{className}}  {
 {{#unaryMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->
                 request.handler(req -> implementation.{{methodName}}(req)
-                    .onSuccess(resp -> request.response().end(resp))
-                ));
+                        .doOnSuccess(resp -> request.response().end(resp))
+                        .subscribe()));
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> request.handler(req -> implementation.{{methodName}}(req).accept(request.response())));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->
+                request.handler(req -> implementation.{{methodName}}(req)
+                        .doOnNext(msg -> request.response().write(msg))
+                        .doOnComplete(() -> request.response().end())
+                        .subscribe()));
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
-        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> implementation.{{methodName}}(request).onSuccess(resp -> request.response().end(resp)));
+        server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
+            implementation.{{methodName}}(Observable.create(emitter -> {
+                        request.handler(emitter::onNext);
+                        request.endHandler($ -> emitter.onComplete());
+                    }))
+                    .doOnSuccess(resp -> request.response().end(resp))
+                    .subscribe();
+        });
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> implementation.{{methodName}}(request).accept(request.response()));

@@ -2,6 +2,7 @@
 package {{packageName}};
 {{/packageName}}
 
+import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -24,29 +25,38 @@ public class {{className}} {
 {{#unaryMethods}}
     public Single<{{outputType}}> {{methodName}}({{inputType}} request) {
         return Single.create(emitter ->
-            client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-                req.end(request);
-                return req.response().compose(resp -> resp.last());
-            })
-            .onSuccess(resp -> emitter.onSuccess(resp)));
+                client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
+                            req.end(request);
+                            return req.response().compose(resp -> resp.last());
+                        })
+                        .onSuccess(resp -> emitter.onSuccess(resp)));
     }
 
 {{/unaryMethods}}
 {{#unaryManyMethods}}
-    public Future<ReadStream<{{outputType}}>> {{methodName}}({{inputType}} request) {
-        return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-            req.end(request);
-            return req.response().map(resp -> resp);
-        });
+    public Observable<{{outputType}}> {{methodName}}({{inputType}} request) {
+        return Observable.create(emitter ->
+                client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
+                            req.end(request);
+                            return req.response().map(resp -> resp);
+                        })
+                        .onSuccess(stream -> {
+                            stream.handler(emitter::onNext);
+                            stream.endHandler($ -> emitter.onComplete());
+                        }));
     }
 
 {{/unaryManyMethods}}
 {{#manyUnaryMethods}}
-    public Future<{{outputType}}> {{methodName}}(Consumer<WriteStream<{{inputType}}>> request) {
-        return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-            request.accept(req);
-            return req.response().compose(resp -> resp.last());
-        });
+    public Single<{{outputType}}> {{methodName}}(Observable<{{inputType}}> request) {
+        return Single.create(emitter ->
+                client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
+                            request.doOnNext(req::write)
+                                    .doOnComplete(() -> req.end())
+                                    .subscribe();
+                            return req.response().compose(resp -> resp.last());
+                        })
+                        .onSuccess(resp -> emitter.onSuccess(resp)));
     }
 
 {{/manyUnaryMethods}}

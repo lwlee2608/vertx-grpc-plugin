@@ -53,7 +53,7 @@ public class HelloWordTest {
     }
 
     @Test
-    void testServerClient(Vertx vertx, VertxTestContext should) {
+    void testServerClient(VertxTestContext should) {
         client.sayHello(HelloRequest.newBuilder()
                         .setName("Hello")
                         .build())

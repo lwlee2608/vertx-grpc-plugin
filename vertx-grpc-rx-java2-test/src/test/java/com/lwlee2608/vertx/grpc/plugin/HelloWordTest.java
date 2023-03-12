@@ -5,6 +5,7 @@ import io.grpc.examples.helloworld.HelloReply;
 import io.grpc.examples.helloworld.HelloRequest;
 import io.grpc.examples.helloworld.VertxGreeterGrpcClient;
 import io.grpc.examples.helloworld.VertxGreeterGrpcServer;
+import io.reactivex.Single;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -35,8 +36,8 @@ public class HelloWordTest {
         VertxGreeterGrpcServer server = new VertxGreeterGrpcServer(vertx)
                 .callHandlers(new VertxGreeterGrpcServer.GreeterApi() {
                     @Override
-                    public Future<HelloReply> sayHello(HelloRequest request) {
-                        return Future.succeededFuture(
+                    public Single<HelloReply> sayHello(HelloRequest request) {
+                        return Single.just(
                                 HelloReply.newBuilder()
                                         .setMessage(request.getName() + " World")
                                         .build());

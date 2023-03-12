@@ -23,7 +23,7 @@
 
     <modules>
         <module>vertx-grpc-protoc-plugin</module>
-        <module>vertx-grpc-protoc-plugin-test</module>
+        <module>vertx-grpc-standard-test</module>
         <module>vertx-grpc-rx-java2-test</module>
     </modules>
 
