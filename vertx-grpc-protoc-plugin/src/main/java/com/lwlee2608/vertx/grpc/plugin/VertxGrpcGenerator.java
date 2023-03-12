@@ -30,14 +30,6 @@ public class VertxGrpcGenerator extends Generator {
         return "        ";
     }
 
-    public static void main(String[] args) {
-        if (args.length == 0) {
-            ProtocPlugin.generate(new VertxGrpcGenerator());
-        } else {
-            ProtocPlugin.debug(new VertxGrpcGenerator(), args[0]);
-        }
-    }
-
     @Override
     protected List<PluginProtos.CodeGeneratorResponse.Feature> supportedFeatures() {
         return Collections.singletonList(PluginProtos.CodeGeneratorResponse.Feature.FEATURE_PROTO3_OPTIONAL);
@@ -124,7 +116,7 @@ public class VertxGrpcGenerator extends Generator {
 
     private MethodContext buildMethodContext(DescriptorProtos.MethodDescriptorProto methodProto, ProtoTypeMap typeMap, List<DescriptorProtos.SourceCodeInfo.Location> locations, int methodNumber) {
         MethodContext methodContext = new MethodContext();
-        methodContext.methodName = mixedLower(methodProto.getName());
+        methodContext.methodName = Util.mixedLower(methodProto.getName());
         methodContext.inputType = typeMap.toJavaTypeName(methodProto.getInputType());
         methodContext.outputType = typeMap.toJavaTypeName(methodProto.getOutputType());
         methodContext.deprecated = methodProto.getOptions() != null && methodProto.getOptions().getDeprecated();
@@ -158,101 +150,6 @@ public class VertxGrpcGenerator extends Generator {
             methodContext.grpcCallsMethodName = "asyncBidiStreamingCall";
         }
         return methodContext;
-    }
-
-    // java keywords from: https://docs.oracle.com/javase/specs/jls/se8/html/jls-3.html#jls-3.9
-    private static final List<CharSequence> JAVA_KEYWORDS = Arrays.asList(
-            "abstract",
-            "assert",
-            "boolean",
-            "break",
-            "byte",
-            "case",
-            "catch",
-            "char",
-            "class",
-            "const",
-            "continue",
-            "default",
-            "do",
-            "double",
-            "else",
-            "enum",
-            "extends",
-            "final",
-            "finally",
-            "float",
-            "for",
-            "goto",
-            "if",
-            "implements",
-            "import",
-            "instanceof",
-            "int",
-            "interface",
-            "long",
-            "native",
-            "new",
-            "package",
-            "private",
-            "protected",
-            "public",
-            "return",
-            "short",
-            "static",
-            "strictfp",
-            "super",
-            "switch",
-            "synchronized",
-            "this",
-            "throw",
-            "throws",
-            "transient",
-            "try",
-            "void",
-            "volatile",
-            "while",
-            // additional ones added by us
-            "true",
-            "false"
-    );
-
-    /**
-     * Adjust a method name prefix identifier to follow the JavaBean spec:
-     * - decapitalize the first letter
-     * - remove embedded underscores & capitalize the following letter
-     * <p>
-     * Finally, if the result is a reserved java keyword, append an underscore.
-     *
-     * @param word method name
-     * @return lower name
-     */
-    private static String mixedLower(String word) {
-        StringBuffer w = new StringBuffer();
-        w.append(Character.toLowerCase(word.charAt(0)));
-
-        boolean afterUnderscore = false;
-
-        for (int i = 1; i < word.length(); ++i) {
-            char c = word.charAt(i);
-
-            if (c == '_') {
-                afterUnderscore = true;
-            } else {
-                if (afterUnderscore) {
-                    w.append(Character.toUpperCase(c));
-                } else {
-                    w.append(c);
-                }
-                afterUnderscore = false;
-            }
-        }
-
-        if (JAVA_KEYWORDS.contains(w)) {
-            w.append('_');
-        }
-
-        return w.toString();
     }
 
     private List<PluginProtos.CodeGeneratorResponse.File> generateFiles(List<ServiceContext> services) {
@@ -316,86 +213,11 @@ public class VertxGrpcGenerator extends Generator {
         return null;
     }
 
-    /**
-     * Template class for proto Service objects.
-     */
-    private static class ServiceContext {
-        // CHECKSTYLE DISABLE VisibilityModifier FOR 8 LINES
-        public String fileName;
-        public String protoName;
-        public String packageName;
-        public String className;
-        public String serviceName;
-        public boolean deprecated;
-        public String javaDoc;
-        public final List<MethodContext> methods = new ArrayList<>();
-
-        public List<MethodContext> streamMethods() {
-            return methods.stream().filter(m -> m.isManyInput || m.isManyOutput).collect(Collectors.toList());
-        }
-
-        public List<MethodContext> unaryMethods() {
-            return methods.stream().filter(m -> !m.isManyInput && !m.isManyOutput).collect(Collectors.toList());
-        }
-
-        public List<MethodContext> unaryManyMethods() {
-            return methods.stream().filter(m -> !m.isManyInput && m.isManyOutput).collect(Collectors.toList());
-        }
-
-        public List<MethodContext> manyUnaryMethods() {
-            return methods.stream().filter(m -> m.isManyInput && !m.isManyOutput).collect(Collectors.toList());
-        }
-
-        public List<MethodContext> manyManyMethods() {
-            return methods.stream().filter(m -> m.isManyInput && m.isManyOutput).collect(Collectors.toList());
-        }
-    }
-
-    /**
-     * Template class for proto RPC objects.
-     */
-    private static class MethodContext {
-        // CHECKSTYLE DISABLE VisibilityModifier FOR 10 LINES
-        public String methodName;
-        public String inputType;
-        public String outputType;
-        public boolean deprecated;
-        public boolean isManyInput;
-        public boolean isManyOutput;
-        public String vertxCallsMethodName;
-        public String grpcCallsMethodName;
-        public int methodNumber;
-        public String javaDoc;
-
-        // This method mimics the upper-casing method ogf gRPC to ensure compatibility
-        // See https://github.com/grpc/grpc-java/blob/v1.8.0/compiler/src/java_plugin/cpp/java_generator.cpp#L58
-        public String methodNameUpperUnderscore() {
-            StringBuilder s = new StringBuilder();
-            for (int i = 0; i < methodName.length(); i++) {
-                char c = methodName.charAt(i);
-                s.append(Character.toUpperCase(c));
-                if ((i < methodName.length() - 1) && Character.isLowerCase(c) && Character.isUpperCase(methodName.charAt(i + 1))) {
-                    s.append('_');
-                }
-            }
-            return s.toString();
-        }
-
-        public String methodNameGetter() {
-            return VertxGrpcGenerator.mixedLower("get_" + methodName + "_method");
-        }
-
-        public String methodHeader() {
-            String mh = "";
-            if (!Strings.isNullOrEmpty(javaDoc)) {
-                mh = javaDoc;
-            }
-
-            if (deprecated) {
-                mh += "\n        @Deprecated";
-            }
-
-            return mh;
+    public static void main(String[] args) {
+        if (args.length == 0) {
+            ProtocPlugin.generate(new VertxGrpcGenerator());
+        } else {
+            ProtocPlugin.debug(new VertxGrpcGenerator(), args[0]);
         }
     }
 }
