@@ -10,8 +10,6 @@ public class MethodContext {
     public boolean deprecated;
     public boolean isManyInput;
     public boolean isManyOutput;
-    public String vertxCallsMethodName;
-    public String grpcCallsMethodName;
     public int methodNumber;
     public String javaDoc;
 
