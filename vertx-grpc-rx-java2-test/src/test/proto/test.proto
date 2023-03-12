@@ -57,22 +57,22 @@ service TestService {
   rpc StreamingInputCall(stream StreamingInputCallRequest)
       returns (StreamingInputCallResponse);
 
-//  // A sequence of requests with each request served by the server immediately.
-//  // As one request could lead to multiple responses, this interface
-//  // demonstrates the idea of full duplexing.
-//  rpc FullDuplexCall(stream StreamingOutputCallRequest)
-//      returns (stream StreamingOutputCallResponse);
-//
-//  // A sequence of requests followed by a sequence of responses.
-//  // The server buffers all the client requests and then serves them in order. A
-//  // stream of responses are returned to the client when the server starts with
-//  // first request.
-//  rpc HalfDuplexCall(stream StreamingOutputCallRequest)
-//      returns (stream StreamingOutputCallResponse);
-//
-//  // The test server will not implement this method. It will be used
-//  // to test the behavior when clients call unimplemented methods.
-//  rpc UnimplementedCall(grpc.testing.Empty) returns (grpc.testing.Empty);
+  // A sequence of requests with each request served by the server immediately.
+  // As one request could lead to multiple responses, this interface
+  // demonstrates the idea of full duplexing.
+  rpc FullDuplexCall(stream StreamingOutputCallRequest)
+      returns (stream StreamingOutputCallResponse);
+
+  // A sequence of requests followed by a sequence of responses.
+  // The server buffers all the client requests and then serves them in order. A
+  // stream of responses are returned to the client when the server starts with
+  // first request.
+  rpc HalfDuplexCall(stream StreamingOutputCallRequest)
+      returns (stream StreamingOutputCallResponse);
+
+  // The test server will not implement this method. It will be used
+  // to test the behavior when clients call unimplemented methods.
+  rpc UnimplementedCall(grpc.testing.Empty) returns (grpc.testing.Empty);
 }
 
 // A simple service NOT implemented at servers so clients can test for

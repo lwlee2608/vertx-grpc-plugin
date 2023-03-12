@@ -4,14 +4,9 @@ package {{packageName}};
 
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.grpc.client.GrpcClient;
-import io.vertx.core.streams.ReadStream;
-import io.vertx.core.streams.WriteStream;
-import java.util.function.Consumer;
-import io.vertx.reactivex.impl.AsyncResultSingle;
 
 public class {{className}} {
     private final GrpcClient client;
@@ -38,7 +33,7 @@ public class {{className}} {
         return Observable.create(emitter ->
                 client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
                             req.end(request);
-                            return req.response().map(resp -> resp);
+                            return req.response();
                         })
                         .onSuccess(stream -> {
                             stream.handler(emitter::onNext);
@@ -61,11 +56,18 @@ public class {{className}} {
 
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
-    public Future<ReadStream<{{outputType}}>> {{methodName}}(Consumer<WriteStream<{{inputType}}>> request) {
-        return client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-            request.accept(req);
-            return req.response().map(resp -> resp);
-        });
+    public Observable<{{outputType}}> {{methodName}}(Observable<{{inputType}}> request) {
+        return Observable.create(emitter ->
+                client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
+                            request.doOnNext(req::write)
+                                    .doOnComplete(() -> req.end())
+                                    .subscribe();
+                            return req.response();
+                        })
+                        .onSuccess(stream -> {
+                            stream.handler(emitter::onNext);
+                            stream.endHandler($ -> emitter.onComplete());
+                        }));
     }
 
 {{/manyManyMethods}}

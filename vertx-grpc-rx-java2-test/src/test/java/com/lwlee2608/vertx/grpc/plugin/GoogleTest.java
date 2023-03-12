@@ -8,13 +8,9 @@ import io.grpc.testing.integration.VertxTestServiceGrpcClient;
 import io.grpc.testing.integration.VertxTestServiceGrpcServer;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.net.SocketAddress;
-import io.vertx.core.streams.ReadStream;
-import io.vertx.core.streams.WriteStream;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.junit.jupiter.api.Assertions;
@@ -28,10 +24,10 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
+@SuppressWarnings("ResultOfMethodCallIgnored")
 public class GoogleTest {
 
     VertxTestServiceGrpcClient client;
@@ -58,10 +54,10 @@ public class GoogleTest {
                                 .build());
                     }
 
-//                    @Override
-//                    public Single<EmptyProtos.Empty> unimplementedCall(EmptyProtos.Empty request) {
-//                        return Single.error(new RuntimeException("Not yet implemented"));
-//                    }
+                    @Override
+                    public Single<EmptyProtos.Empty> unimplementedCall(EmptyProtos.Empty request) {
+                        return Single.error(new RuntimeException("Not yet implemented"));
+                    }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingInputCall(stream StreamingInputCallRequest) returns (StreamingInputCallResponse);
@@ -95,27 +91,27 @@ public class GoogleTest {
                         });
                     }
 
-//                    // Implement following RPC defined in test.proto:
-//                    //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
-//                    @Override
-//                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> fullDuplexCall(ReadStream<Messages.StreamingOutputCallRequest> request) {
-//                        return response -> {
-//                            request.endHandler($ -> {
-//                                response.write(Messages.StreamingOutputCallResponse.newBuilder()
-//                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
-//                                        .build());
-//                                response.write(Messages.StreamingOutputCallResponse.newBuilder()
-//                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
-//                                        .build());
-//                                response.end();
-//                            });
-//                        };
-//                    }
-//
-//                    @Override
-//                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> halfDuplexCall(ReadStream<Messages.StreamingOutputCallRequest> request) {
-//                        return response -> {};
-//                    }
+                    // Implement following RPC defined in test.proto:
+                    //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
+                    @Override
+                    public Observable<Messages.StreamingOutputCallResponse> fullDuplexCall(Observable<Messages.StreamingOutputCallRequest> request) {
+                        return Observable.create(emitter -> {
+                            request.subscribe(req -> {}, error -> {}, () -> {
+                                emitter.onNext(Messages.StreamingOutputCallResponse.newBuilder()
+                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
+                                        .build());
+                                emitter.onNext(Messages.StreamingOutputCallResponse.newBuilder()
+                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
+                                        .build());
+                                emitter.onComplete();
+                            });
+                        });
+                    }
+
+                    @Override
+                    public Observable<Messages.StreamingOutputCallResponse> halfDuplexCall(Observable<Messages.StreamingOutputCallRequest> request) {
+                        return Observable.error(new RuntimeException("Not yet implemented"));
+                    }
                 });
 
         HttpServer httpServer = vertx.createHttpServer();
@@ -165,27 +161,23 @@ public class GoogleTest {
                 });
     }
 
-//    @Test
-//    void testManyMany(VertxTestContext should) {
-//        client.fullDuplexCall(req -> {
-//                    req.write(Messages.StreamingOutputCallRequest.newBuilder()
-//                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8)).build())
-//                            .build());
-//                    req.write(Messages.StreamingOutputCallRequest.newBuilder()
-//                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8)).build())
-//                            .build());
-//                    req.end();
-//                })
-//                .onSuccess(response -> {
-//                    List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
-//                    response.handler(list::add);
-//                    response.endHandler($ -> {
-//                        Assertions.assertEquals(2, list.size());
-//                        should.completeNow();
-//                    });
-//                    response.exceptionHandler(should::failNow);
-//                });
-//    }
+    @Test
+    void testManyMany(VertxTestContext should) {
+        List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
+        client.fullDuplexCall(Observable.create(emitter -> {
+                    emitter.onNext(Messages.StreamingOutputCallRequest.newBuilder()
+                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8)).build())
+                            .build());
+                    emitter.onNext(Messages.StreamingOutputCallRequest.newBuilder()
+                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8)).build())
+                            .build());
+                    emitter.onComplete();
+                }))
+                .subscribe(list::add, should::failNow, () -> {
+                    Assertions.assertEquals(2, list.size());
+                    should.completeNow();
+                });
+    }
 
     private Integer getFreePort() throws IOException {
         try (ServerSocket socket = new ServerSocket(0)) {
