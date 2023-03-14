@@ -13,6 +13,14 @@
         <url>git@github.com/lwlee2608/vertx-grpc-plugin.git</url>
     </scm>
 
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <groupId>com.lwlee2608.vertx.grpc</groupId>
     <artifactId>vertx-grpc-plugin-parent</artifactId>
     <version>1.0.1-SNAPSHOT</version>
@@ -41,8 +49,8 @@
 
     <modules>
         <module>vertx-grpc-protoc-plugin</module>
-        <module>vertx-grpc-standard-test</module>
-        <module>vertx-grpc-rx-java2-test</module>
+        <module>vertx-grpc-test</module>
+        <module>vertx-grpc-test-rx2</module>
     </modules>
 
     <dependencyManagement>

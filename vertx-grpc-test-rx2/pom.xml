@@ -7,39 +7,45 @@
         <version>1.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>vertx-grpc-rx-java2-test</artifactId>
+    <artifactId>vertx-grpc-test-rx2</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>com.lwlee2608.vertx.grpc</groupId>
             <artifactId>vertx-grpc-protoc-plugin</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-core</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-grpc-client</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-grpc-server</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-rx-java2</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
             <version>${grpc.version}</version>
+            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>com.google.errorprone</groupId>
@@ -55,6 +61,7 @@
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
             <version>${grpc.version}</version>
+            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>com.google.guava</groupId>
