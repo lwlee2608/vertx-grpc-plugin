@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.lwlee2608.vertx.grpc</groupId>
+        <groupId>io.github.lwlee2608</groupId>
         <artifactId>vertx-grpc-plugin-parent</artifactId>
         <version>1.0.1-SNAPSHOT</version>
     </parent>
@@ -11,7 +11,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.lwlee2608.vertx.grpc</groupId>
+            <groupId>io.github.lwlee2608</groupId>
             <artifactId>vertx-grpc-protoc-plugin</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -110,7 +110,7 @@
                     <protocPlugins>
                         <protocPlugin>
                             <id>vertx-grpc-protoc-plugin</id>
-                            <groupId>com.lwlee2608.vertx.grpc</groupId>
+                            <groupId>io.github.lwlee2608</groupId>
                             <artifactId>vertx-grpc-protoc-plugin</artifactId>
                             <version>${project.version}</version>
                             <mainClass>com.lwlee2608.vertx.grpc.plugin.VertxGrpcRx2Generator</mainClass>
