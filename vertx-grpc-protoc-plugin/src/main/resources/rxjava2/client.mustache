@@ -24,6 +24,7 @@ public class {{className}} {
                             req.end(request);
                             return req.response().compose(resp -> resp.last());
                         })
+                        .onFailure(error -> emitter.onError(error))
                         .onSuccess(resp -> emitter.onSuccess(resp)));
     }
 
@@ -35,6 +36,7 @@ public class {{className}} {
                             req.end(request);
                             return req.response();
                         })
+                        .onFailure(error -> emitter.onError(error))
                         .onSuccess(stream -> {
                             stream.handler(emitter::onNext);
                             stream.endHandler($ -> emitter.onComplete());
@@ -51,6 +53,7 @@ public class {{className}} {
                                     .subscribe();
                             return req.response().compose(resp -> resp.last());
                         })
+                        .onFailure(error -> emitter.onError(error))
                         .onSuccess(resp -> emitter.onSuccess(resp)));
     }
 
@@ -64,6 +67,7 @@ public class {{className}} {
                                     .subscribe();
                             return req.response();
                         })
+                        .onFailure(error -> emitter.onError(error))
                         .onSuccess(stream -> {
                             stream.handler(emitter::onNext);
                             stream.endHandler($ -> emitter.onComplete());
