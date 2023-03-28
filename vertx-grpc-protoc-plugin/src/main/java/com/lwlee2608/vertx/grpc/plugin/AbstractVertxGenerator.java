@@ -53,7 +53,7 @@ public class AbstractVertxGenerator extends Generator {
         Context context = new Context();
         context.messages.addAll(protosToGenerate.stream()
                 .flatMap(fileProto -> {
-                    String packageName = extractPackageName(fileProto);
+                    String packageName = extractPackageName(fileProto) + ".pojo";
                     return fileProto.getMessageTypeList()
                             .stream()
                             .map(msg -> buildMessageContext(msg, packageName));
@@ -88,15 +88,66 @@ public class AbstractVertxGenerator extends Generator {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
         messageContext.packageName = packageName;
-        messageContext.fileName = messageContext.name + "Pojo.java";
-        messageContext.className = messageContext.name + "Pojo";
+        messageContext.fileName = messageContext.name + ".java";
+        messageContext.className = messageContext.name;
         // populate fields
         descriptor.getFieldList().forEach(fieldDescriptor -> {
             FieldContext fieldContext = new FieldContext();
             fieldContext.name = fieldDescriptor.getName();
+            fieldContext.javaType = getJavaType(fieldDescriptor);
+            fieldContext.isEnum = fieldDescriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_ENUM;
             messageContext.fields.add(fieldContext);
         });
         return messageContext;
+    }
+
+    private String getJavaType(DescriptorProtos.FieldDescriptorProto descriptor) {
+        switch (descriptor.getType()) {
+            case TYPE_DOUBLE: return "double";
+            case TYPE_FLOAT: return "float";
+            case TYPE_INT64:
+            case TYPE_FIXED64:
+            case TYPE_SFIXED64:
+            case TYPE_SINT64:
+            case TYPE_UINT64: return "long";
+            case TYPE_INT32:
+            case TYPE_UINT32:
+            case TYPE_SFIXED32:
+            case TYPE_SINT32:
+            case TYPE_FIXED32: return "int";
+            case TYPE_BOOL: return "boolean";
+            case TYPE_STRING: return "String";
+            case TYPE_MESSAGE: {
+                String typeName = descriptor.getTypeName();
+                switch (typeName) {
+                    case ".google.protobuf.Int32Value":
+                    case ".google.protobuf.UInt32Value":
+                        return "Integer";
+                    case ".google.protobuf.Int64Value":
+                    case ".google.protobuf.UInt64Value":
+                        return "Long";
+                    case ".google.protobuf.StringValue":
+                        return "String";
+                    case ".google.protobuf.BoolValue":
+                        return "Boolean";
+                    case ".google.protobuf.FloatValue":
+                        return "Float";
+                    case ".google.protobuf.DoubleValue":
+                        return "Double";
+                    case ".google.protobuf.BytesValue":
+                        return "Bytes";
+                    default:
+                        // nested field
+                        String[] token = typeName.split("\\.");
+                        return token[token.length - 1];
+                }
+            }
+            case TYPE_ENUM: return "Enum";
+            case TYPE_BYTES: return "byte";
+            case TYPE_GROUP:
+            default:
+                throw new RuntimeException("Type '" + descriptor.getType() + "' Not supported yet");
+        }
     }
 
     private String extractPackageName(DescriptorProtos.FileDescriptorProto proto) {
