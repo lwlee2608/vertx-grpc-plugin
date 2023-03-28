@@ -50,8 +50,18 @@ public class AbstractVertxGenerator extends Generator {
                 .filter(protoFile -> request.getFileToGenerateList().contains(protoFile.getName()))
                 .collect(Collectors.toList());
 
-        List<ServiceContext> services = findServices(protosToGenerate, typeMap);
-        return generateFiles(services);
+        Context context = new Context();
+        context.messages.addAll(protosToGenerate.stream()
+                .flatMap(fileProto -> {
+                    String packageName = extractPackageName(fileProto);
+                    return fileProto.getMessageTypeList()
+                            .stream()
+                            .map(msg -> buildMessageContext(msg, packageName));
+                })
+                .collect(Collectors.toList()));
+
+        context.services.addAll(findServices(protosToGenerate, typeMap));
+        return generateFiles(context);
     }
 
     private List<ServiceContext> findServices(List<DescriptorProtos.FileDescriptorProto> protos, ProtoTypeMap typeMap) {
@@ -72,6 +82,21 @@ public class AbstractVertxGenerator extends Generator {
         });
 
         return contexts;
+    }
+
+    private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName) {
+        MessageContext messageContext = new MessageContext();
+        messageContext.name = descriptor.getName();
+        messageContext.packageName = packageName;
+        messageContext.fileName = messageContext.name + "Pojo.java";
+        messageContext.className = messageContext.name + "Pojo";
+        // populate fields
+        descriptor.getFieldList().forEach(fieldDescriptor -> {
+            FieldContext fieldContext = new FieldContext();
+            fieldContext.name = fieldDescriptor.getName();
+            messageContext.fields.add(fieldContext);
+        });
+        return messageContext;
     }
 
     private String extractPackageName(DescriptorProtos.FileDescriptorProto proto) {
@@ -142,11 +167,32 @@ public class AbstractVertxGenerator extends Generator {
         return methodContext;
     }
 
-    private List<PluginProtos.CodeGeneratorResponse.File> generateFiles(List<ServiceContext> services) {
-        return services.stream()
-                .map(this::buildFiles)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+    private List<PluginProtos.CodeGeneratorResponse.File> generateFiles(Context context) {
+        List<PluginProtos.CodeGeneratorResponse.File> files = new ArrayList<>();
+
+        List<PluginProtos.CodeGeneratorResponse.File> pojoFiles =
+                context.messages.stream()
+                        .map(this::buildPojo)
+                        .collect(Collectors.toList());
+
+        List<PluginProtos.CodeGeneratorResponse.File> serviceFiles =
+                context.services.stream()
+                        .map(this::buildFiles)
+                        .flatMap(Collection::stream)
+                        .collect(Collectors.toList());
+
+        files.addAll(pojoFiles);
+        files.addAll(serviceFiles);
+        return files;
+    }
+
+    private PluginProtos.CodeGeneratorResponse.File buildPojo(MessageContext context) {
+        String content = applyTemplate("pojo/pojo.mustache", context);
+        return PluginProtos.CodeGeneratorResponse.File
+                .newBuilder()
+                .setName(absoluteFileName(context))
+                .setContent(content)
+                .build();
     }
 
     private List<PluginProtos.CodeGeneratorResponse.File> buildFiles(ServiceContext context) {
@@ -176,6 +222,16 @@ public class AbstractVertxGenerator extends Generator {
     }
 
     private String absoluteFileName(ServiceContext ctx) {
+        String dir = ctx.packageName.replace('.', '/');
+        if (Strings.isNullOrEmpty(dir)) {
+            return ctx.fileName;
+        } else {
+            return dir + "/" + ctx.fileName;
+        }
+    }
+
+    // TODO combine
+    private String absoluteFileName(MessageContext ctx) {
         String dir = ctx.packageName.replace('.', '/');
         if (Strings.isNullOrEmpty(dir)) {
             return ctx.fileName;
