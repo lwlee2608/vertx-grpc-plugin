@@ -4,6 +4,11 @@ import com.google.common.base.Strings;
 import com.google.common.html.HtmlEscapers;
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.compiler.PluginProtos;
+import com.lwlee2608.vertx.grpc.plugin.context.Context;
+import com.lwlee2608.vertx.grpc.plugin.context.FieldContext;
+import com.lwlee2608.vertx.grpc.plugin.context.MessageContext;
+import com.lwlee2608.vertx.grpc.plugin.context.MethodContext;
+import com.lwlee2608.vertx.grpc.plugin.context.ServiceContext;
 import com.salesforce.jprotoc.Generator;
 import com.salesforce.jprotoc.GeneratorException;
 import com.salesforce.jprotoc.ProtoTypeMap;
@@ -53,7 +58,7 @@ public class AbstractVertxGenerator extends Generator {
         Context context = new Context();
         context.messages.addAll(protosToGenerate.stream()
                 .flatMap(fileProto -> {
-                    String packageName = extractPackageName(fileProto) + ".pojo";
+                    String packageName = extractPackageName(fileProto);
                     return fileProto.getMessageTypeList()
                             .stream()
                             .map(msg -> buildMessageContext(msg, packageName));
@@ -87,15 +92,24 @@ public class AbstractVertxGenerator extends Generator {
     private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName) {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
-        messageContext.packageName = packageName;
+        messageContext.packageName = packageName + ".pojo";
         messageContext.fileName = messageContext.name + ".java";
         messageContext.className = messageContext.name;
+        messageContext.protoObject = packageName + "." + messageContext.name;
         // populate fields
         descriptor.getFieldList().forEach(fieldDescriptor -> {
             FieldContext fieldContext = new FieldContext();
             fieldContext.name = fieldDescriptor.getName();
+            fieldContext.camelCaseName = Util.camelCase(fieldDescriptor.getName());
+            fieldContext.pascalCaseName = Util.pascalCase(fieldDescriptor.getName());
             fieldContext.javaType = getJavaType(fieldDescriptor);
             fieldContext.isEnum = fieldDescriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_ENUM;
+            fieldContext.isNullable = isNullable(fieldDescriptor);
+            if (fieldContext.isNullable) {
+                String typeName = fieldDescriptor.getTypeName();
+                String[] token = typeName.split("\\.");
+                fieldContext.nullableJavaType = token[token.length - 1];
+            }
             messageContext.fields.add(fieldContext);
         });
         return messageContext;
@@ -150,6 +164,25 @@ public class AbstractVertxGenerator extends Generator {
         }
     }
 
+    private boolean isNullable(DescriptorProtos.FieldDescriptorProto descriptor) {
+        if (descriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_MESSAGE) {
+            String typeName = descriptor.getTypeName();
+            switch (typeName) {
+                case ".google.protobuf.Int32Value":
+                case ".google.protobuf.UInt32Value":
+                case ".google.protobuf.Int64Value":
+                case ".google.protobuf.UInt64Value":
+                case ".google.protobuf.StringValue":
+                case ".google.protobuf.BoolValue":
+                case ".google.protobuf.FloatValue":
+                case ".google.protobuf.DoubleValue":
+                case ".google.protobuf.BytesValue":
+                    return true;
+            }
+        }
+        return false;
+    }
+
     private String extractPackageName(DescriptorProtos.FileDescriptorProto proto) {
         DescriptorProtos.FileOptions options = proto.getOptions();
         if (options != null) {
@@ -199,7 +232,7 @@ public class AbstractVertxGenerator extends Generator {
 
     private MethodContext buildMethodContext(DescriptorProtos.MethodDescriptorProto methodProto, ProtoTypeMap typeMap, List<DescriptorProtos.SourceCodeInfo.Location> locations, int methodNumber) {
         MethodContext methodContext = new MethodContext();
-        methodContext.methodName = Util.mixedLower(methodProto.getName());
+        methodContext.methodName = Util.camelCase(methodProto.getName());
         methodContext.inputType = typeMap.toJavaTypeName(methodProto.getInputType());
         methodContext.outputType = typeMap.toJavaTypeName(methodProto.getOutputType());
         methodContext.deprecated = methodProto.getOptions() != null && methodProto.getOptions().getDeprecated();

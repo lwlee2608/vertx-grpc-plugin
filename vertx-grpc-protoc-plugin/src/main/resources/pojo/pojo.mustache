@@ -2,6 +2,7 @@
 package {{packageName}};
 {{/packageName}}
 
+import com.google.protobuf.*;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -9,32 +10,36 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class {{className}} {
 {{#fields}}
-    private {{javaType}} {{name}};
+    private {{javaType}} {{camelCaseName}};
 {{/fields}}
 
-//    static public io.grpc.examples.helloworld.HelloRequest toProto(HelloRequest pojo) {
-//        io.grpc.examples.helloworld.HelloRequest.Builder builder = io.grpc.examples.helloworld.HelloRequest.newBuilder();
-//        builder.setName(pojo.name == null ? "" : pojo.name);
-//        builder.setAge(pojo.age);
-//        if (pojo.address != null) {
-//            builder.setAddress(StringValue.of(pojo.address));
-//        }
-//        if (pojo.count != null) {
-//            builder.setCount(Int32Value.of(pojo.count));
-//        }
-//        return builder.build();
-//    }
-//
-//    static public HelloRequest fromProto(io.grpc.examples.helloworld.HelloRequest proto) {
-//        HelloRequest pojo = new HelloRequest();
-//        pojo.setName(proto.getName());
-//        pojo.setAge(proto.getAge());
-//        if (proto.hasAddress()) {
-//            pojo.setAddress(proto.getAddress().getValue());
-//        }
-//        if (proto.hasCount()) {
-//            pojo.setCount(proto.getCount().getValue());
-//        }
-//        return pojo;
-//    }
+    static public {{protoObject}} toProto({{className}} pojo) {
+        {{protoObject}}.Builder builder = {{protoObject}}.newBuilder();
+{{#fields}}
+{{#isNullable}}
+        if (pojo.{{camelCaseName}} != null) {
+            builder.set{{pascalCaseName}}({{nullableJavaType}}.of(pojo.{{camelCaseName}}));
+        }
+{{/isNullable}}
+{{^isNullable}}
+        builder.set{{pascalCaseName}}(pojo.{{camelCaseName}});
+{{/isNullable}}
+{{/fields}}
+        return builder.build();
+    }
+
+    static public {{className}} fromProto({{protoObject}} proto) {
+        {{className}} pojo = new {{className}}();
+{{#fields}}
+{{#isNullable}}
+        if (proto.has{{pascalCaseName}}()) {
+            pojo.set{{pascalCaseName}}(proto.get{{pascalCaseName}}().getValue());
+        }
+{{/isNullable}}
+{{^isNullable}}
+        pojo.set{{pascalCaseName}}(proto.get{{pascalCaseName}}());
+{{/isNullable}}
+{{/fields}}
+        return pojo;
+    }
 }

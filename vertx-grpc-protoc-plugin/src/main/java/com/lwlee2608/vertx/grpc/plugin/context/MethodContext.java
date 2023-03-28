@@ -1,6 +1,7 @@
-package com.lwlee2608.vertx.grpc.plugin;
+package com.lwlee2608.vertx.grpc.plugin.context;
 
 import com.google.common.base.Strings;
+import com.lwlee2608.vertx.grpc.plugin.Util;
 
 public class MethodContext {
     // CHECKSTYLE DISABLE VisibilityModifier FOR 10 LINES
@@ -14,7 +15,7 @@ public class MethodContext {
     public String javaDoc;
 
     public String methodNameGetter() {
-        return Util.mixedLower("get_" + methodName + "_method");
+        return Util.camelCase("get_" + methodName + "_method");
     }
 
     public String methodHeader() {

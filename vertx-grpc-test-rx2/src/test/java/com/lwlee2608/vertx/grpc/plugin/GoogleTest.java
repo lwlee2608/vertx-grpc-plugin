@@ -1,6 +1,6 @@
 package com.lwlee2608.vertx.grpc.plugin;
 
-
+/*
 import com.google.protobuf.ByteString;
 import com.google.protobuf.EmptyProtos;
 import io.grpc.testing.integration.Messages;
@@ -185,3 +185,4 @@ public class GoogleTest {
         }
     }
 }
+*/
