@@ -8,6 +8,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.grpc.server.GrpcServer;
+{{#imports}}
+import {{.}};
+{{/imports}}
 
 public class {{className}}  {
     private final GrpcServer server;

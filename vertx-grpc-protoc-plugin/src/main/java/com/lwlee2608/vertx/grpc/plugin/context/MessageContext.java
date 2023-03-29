@@ -6,15 +6,15 @@ import java.util.List;
 public class MessageContext {
     public String className;
     public String packageName;
+    public String protoPackage;
     public String name;
     public final List<FieldContext> fields = new ArrayList<>();
-    public String pojoPackageName;
 
     public String pojoFullName() {
-        return pojoPackageName + "." + className;
+        return packageName + "." + className;
     }
 
-    public String fullName() {
-        return packageName + "." + className;
+    public String protoFullName() {
+        return protoPackage + "." + className;
     }
 }

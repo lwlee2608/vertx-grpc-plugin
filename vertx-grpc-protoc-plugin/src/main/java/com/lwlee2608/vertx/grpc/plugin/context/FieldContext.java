@@ -1,12 +1,25 @@
 package com.lwlee2608.vertx.grpc.plugin.context;
 
+import com.lwlee2608.vertx.grpc.plugin.Util;
+
 public class FieldContext {
+    public String protoName;
     public String name;
-    public String camelCaseName;
-    public String pascalCaseName;
     public String javaType;
-    public String nullableJavaType;
+    public String nullableType;
     public Boolean isEnum;
     public Boolean isNullable;
     // public Boolean isNested;
+
+    public String getter() {
+        return Util.camelCase("get_" + name);
+    }
+
+    public String setter() {
+        return Util.camelCase("set_" + name);
+    }
+
+    public String hasFunction() {
+        return Util.camelCase("has_" + name);
+    }
 }

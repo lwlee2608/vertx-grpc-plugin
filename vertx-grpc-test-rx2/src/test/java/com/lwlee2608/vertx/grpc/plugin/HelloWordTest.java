@@ -1,8 +1,8 @@
 package com.lwlee2608.vertx.grpc.plugin;
 
 
-import io.grpc.examples.helloworld.VertxGreeterGrpcClient;
-import io.grpc.examples.helloworld.VertxGreeterGrpcServer;
+import io.grpc.examples.helloworld.component.VertxGreeterGrpcClient;
+import io.grpc.examples.helloworld.component.VertxGreeterGrpcServer;
 import io.grpc.examples.helloworld.pojo.HelloReply;
 import io.grpc.examples.helloworld.pojo.HelloRequest;
 import io.reactivex.Single;

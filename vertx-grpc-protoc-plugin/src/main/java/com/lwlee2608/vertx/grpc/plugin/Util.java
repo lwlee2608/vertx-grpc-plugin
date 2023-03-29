@@ -100,8 +100,8 @@ public class Util {
         return w.toString();
     }
 
-    public static String pascalCase(String word) {
-        String camelCase = camelCase(word);
-        return camelCase.substring(0, 1).toUpperCase() + camelCase.substring(1);
+    public static String getSimpleClass(String fullName) {
+        String[] token = fullName.split("\\.");
+        return token[token.length - 1];
     }
 }

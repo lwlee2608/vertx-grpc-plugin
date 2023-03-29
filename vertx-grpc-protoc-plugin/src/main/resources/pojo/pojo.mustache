@@ -1,6 +1,6 @@
-{{#pojoPackageName}}
-package {{pojoPackageName}};
-{{/pojoPackageName}}
+{{#packageName}}
+package {{packageName}};
+{{/packageName}}
 
 import com.google.protobuf.*;
 import lombok.Data;
@@ -10,34 +10,34 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class {{className}} {
 {{#fields}}
-    private {{javaType}} {{camelCaseName}};
+    private {{javaType}} {{name}};
 {{/fields}}
 
-    static public {{fullName}} toProto({{className}} pojo) {
-        {{fullName}}.Builder builder = {{fullName}}.newBuilder();
+    static public {{protoFullName}} toProto({{className}} pojo) {
+        {{protoFullName}}.Builder builder = {{protoFullName}}.newBuilder();
 {{#fields}}
 {{#isNullable}}
-        if (pojo.{{camelCaseName}} != null) {
-            builder.set{{pascalCaseName}}({{nullableJavaType}}.of(pojo.{{camelCaseName}}));
+        if (pojo.{{name}} != null) {
+            builder.{{setter}}({{nullableType}}.of(pojo.{{name}}));
         }
 {{/isNullable}}
 {{^isNullable}}
-        builder.set{{pascalCaseName}}(pojo.{{camelCaseName}});
+        builder.{{setter}}(pojo.{{name}});
 {{/isNullable}}
 {{/fields}}
         return builder.build();
     }
 
-    static public {{className}} fromProto({{fullName}} proto) {
+    static public {{className}} fromProto({{protoFullName}} proto) {
         {{className}} pojo = new {{className}}();
 {{#fields}}
 {{#isNullable}}
-        if (proto.has{{pascalCaseName}}()) {
-            pojo.set{{pascalCaseName}}(proto.get{{pascalCaseName}}().getValue());
+        if (proto.{{hasFunction}}()) {
+            pojo.{{setter}}(proto.{{getter}}().getValue());
         }
 {{/isNullable}}
 {{^isNullable}}
-        pojo.set{{pascalCaseName}}(proto.get{{pascalCaseName}}());
+        pojo.{{setter}}(proto.{{getter}}());
 {{/isNullable}}
 {{/fields}}
         return pojo;

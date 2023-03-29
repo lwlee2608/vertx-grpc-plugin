@@ -4,10 +4,11 @@ import com.google.common.base.Strings;
 import com.lwlee2608.vertx.grpc.plugin.Util;
 
 public class MethodContext {
-    // CHECKSTYLE DISABLE VisibilityModifier FOR 10 LINES
     public String methodName;
     public String inputType;
     public String outputType;
+    public String inputTypeFullName;
+    public String outputTypeFullName;
     public boolean deprecated;
     public boolean isManyInput;
     public boolean isManyOutput;

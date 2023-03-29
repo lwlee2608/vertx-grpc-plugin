@@ -17,7 +17,6 @@ import com.salesforce.jprotoc.ProtoTypeMap;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -92,7 +91,13 @@ public class AbstractVertxGenerator extends Generator {
                 clientContext.type = ComponentType.Client;
                 clientContext.service = service;
                 clientContext.className = CLASS_PREFIX + service.serviceName + "GrpcClient";
-                clientContext.packageName = packageName;
+                clientContext.packageName = packageName + ".component";
+                clientContext.protoPackage = packageName;
+                clientContext.imports.add(packageName + "." + service.serviceName + "Grpc");
+                service.methods.forEach(method -> {
+                    clientContext.imports.add(method.inputTypeFullName);
+                    clientContext.imports.add(method.outputTypeFullName);
+                });
                 contexts.add(clientContext);
 
                 // Server
@@ -100,7 +105,13 @@ public class AbstractVertxGenerator extends Generator {
                 serverContext.type = ComponentType.Server;
                 serverContext.service = service;
                 serverContext.className = CLASS_PREFIX + service.serviceName + "GrpcServer";
-                serverContext.packageName = packageName;
+                serverContext.packageName = packageName + ".component";
+                serverContext.protoPackage = packageName;
+                serverContext.imports.add(packageName + "." + service.serviceName + "Grpc");
+                service.methods.forEach(method -> {
+                    serverContext.imports.add(method.inputTypeFullName);
+                    serverContext.imports.add(method.outputTypeFullName);
+                });
                 contexts.add(serverContext);
             });
         });
@@ -129,21 +140,19 @@ public class AbstractVertxGenerator extends Generator {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
         messageContext.className = messageContext.name;
-        messageContext.packageName = packageName;
-        messageContext.pojoPackageName = packageName + ".pojo";
+        messageContext.packageName = packageName + ".pojo";
+        messageContext.protoPackage = packageName;
         // populate fields
         descriptor.getFieldList().forEach(fieldDescriptor -> {
             FieldContext fieldContext = new FieldContext();
-            fieldContext.name = fieldDescriptor.getName();
-            fieldContext.camelCaseName = Util.camelCase(fieldDescriptor.getName());
-            fieldContext.pascalCaseName = Util.pascalCase(fieldDescriptor.getName());
+            fieldContext.protoName = fieldDescriptor.getName();
+            fieldContext.name = Util.camelCase(fieldDescriptor.getName());
             fieldContext.javaType = getJavaType(fieldDescriptor);
             fieldContext.isEnum = fieldDescriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_ENUM;
             fieldContext.isNullable = isNullable(fieldDescriptor);
             if (fieldContext.isNullable) {
                 String typeName = fieldDescriptor.getTypeName();
-                String[] token = typeName.split("\\.");
-                fieldContext.nullableJavaType = token[token.length - 1];
+                fieldContext.nullableType = Util.getSimpleClass(typeName);
             }
             messageContext.fields.add(fieldContext);
         });
@@ -186,9 +195,7 @@ public class AbstractVertxGenerator extends Generator {
                     case ".google.protobuf.BytesValue":
                         return "Bytes";
                     default:
-                        // nested field
-                        String[] token = typeName.split("\\.");
-                        return token[token.length - 1];
+                        return Util.getSimpleClass(typeName);
                 }
             }
             case TYPE_ENUM: return "Enum";
@@ -269,11 +276,12 @@ public class AbstractVertxGenerator extends Generator {
         MethodContext methodContext = new MethodContext();
         methodContext.methodName = Util.camelCase(methodProto.getName());
 
-        methodContext.inputType = pojoTypeMap.get(methodProto.getInputType()).pojoFullName();
-        methodContext.outputType = pojoTypeMap.get(methodProto.getOutputType()).pojoFullName();
-        // delete me
-//        methodContext.inputType = typeMap.toJavaTypeName(methodProto.getInputType());
-//        methodContext.outputType = typeMap.toJavaTypeName(methodProto.getOutputType());
+        MessageContext inputType = pojoTypeMap.get(methodProto.getInputType());
+        MessageContext outputType = pojoTypeMap.get(methodProto.getOutputType());
+        methodContext.inputType = inputType.className;
+        methodContext.outputType = outputType.className;
+        methodContext.inputTypeFullName = inputType.pojoFullName();
+        methodContext.outputTypeFullName = outputType.pojoFullName();
 
         methodContext.deprecated = methodProto.getOptions() != null && methodProto.getOptions().getDeprecated();
         methodContext.isManyInput = methodProto.getClientStreaming();
@@ -302,7 +310,6 @@ public class AbstractVertxGenerator extends Generator {
         List<PluginProtos.CodeGeneratorResponse.File> componentFiles =
                 context.components.stream()
                         .map(this::buildFile)
-//                        .flatMap(Collection::stream)
                         .collect(Collectors.toList());
 
         files.addAll(pojoFiles);
@@ -341,7 +348,7 @@ public class AbstractVertxGenerator extends Generator {
 
     // TODO combine
     private String absoluteFileName(MessageContext ctx) {
-        String dir = ctx.pojoPackageName.replace('.', '/');
+        String dir = ctx.packageName.replace('.', '/');
         String fileName = ctx.className + ".java";
         if (Strings.isNullOrEmpty(dir)) {
             return fileName;
