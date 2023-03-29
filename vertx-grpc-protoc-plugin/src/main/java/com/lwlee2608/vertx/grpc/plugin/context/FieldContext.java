@@ -9,7 +9,7 @@ public class FieldContext {
     public String nullableType;
     public Boolean isEnum;
     public Boolean isNullable;
-    // public Boolean isNested;
+    public Boolean isMessage;
 
     public String getter() {
         return Util.camelCase("get_" + name);

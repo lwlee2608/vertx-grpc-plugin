@@ -150,9 +150,17 @@ public class AbstractVertxGenerator extends Generator {
             fieldContext.javaType = getJavaType(fieldDescriptor);
             fieldContext.isEnum = fieldDescriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_ENUM;
             fieldContext.isNullable = isNullable(fieldDescriptor);
+            fieldContext.isMessage = isMessage(fieldDescriptor);
+            if (fieldContext.isEnum) {
+                // TODO Enum type may be defined in another proto file
+                messageContext.imports.add(packageName + "." + fieldContext.javaType);
+            }
             if (fieldContext.isNullable) {
                 String typeName = fieldDescriptor.getTypeName();
                 fieldContext.nullableType = Util.getSimpleClass(typeName);
+            }
+            if (fieldContext.isMessage) {
+                fieldContext.isNullable = true; // TODO simplify this
             }
             messageContext.fields.add(fieldContext);
         });
@@ -198,8 +206,8 @@ public class AbstractVertxGenerator extends Generator {
                         return Util.getSimpleClass(typeName);
                 }
             }
-            case TYPE_ENUM: return "Enum";
-            case TYPE_BYTES: return "byte";
+            case TYPE_ENUM: return Util.getSimpleClass(descriptor.getTypeName());
+            case TYPE_BYTES: return "ByteString";
             case TYPE_GROUP:
             default:
                 throw new RuntimeException("Type '" + descriptor.getType() + "' Not supported yet");
@@ -219,6 +227,27 @@ public class AbstractVertxGenerator extends Generator {
                 case ".google.protobuf.FloatValue":
                 case ".google.protobuf.DoubleValue":
                 case ".google.protobuf.BytesValue":
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isMessage(DescriptorProtos.FieldDescriptorProto descriptor) {
+        if (descriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_MESSAGE) {
+            String typeName = descriptor.getTypeName();
+            switch (typeName) {
+                case ".google.protobuf.Int32Value":
+                case ".google.protobuf.UInt32Value":
+                case ".google.protobuf.Int64Value":
+                case ".google.protobuf.UInt64Value":
+                case ".google.protobuf.StringValue":
+                case ".google.protobuf.BoolValue":
+                case ".google.protobuf.FloatValue":
+                case ".google.protobuf.DoubleValue":
+                case ".google.protobuf.BytesValue":
+                    return false;
+                default:
                     return true;
             }
         }
@@ -276,12 +305,14 @@ public class AbstractVertxGenerator extends Generator {
         MethodContext methodContext = new MethodContext();
         methodContext.methodName = Util.camelCase(methodProto.getName());
 
-        MessageContext inputType = pojoTypeMap.get(methodProto.getInputType());
-        MessageContext outputType = pojoTypeMap.get(methodProto.getOutputType());
-        methodContext.inputType = inputType.className;
-        methodContext.outputType = outputType.className;
-        methodContext.inputTypeFullName = inputType.pojoFullName();
-        methodContext.outputTypeFullName = outputType.pojoFullName();
+        MessageContext inputMessage = pojoTypeMap.get(methodProto.getInputType());
+        MessageContext outputMessage = pojoTypeMap.get(methodProto.getOutputType());
+        methodContext.inputMessage = inputMessage;
+        methodContext.outputMessage = outputMessage;
+        methodContext.inputType = inputMessage.className;
+        methodContext.outputType = outputMessage.className;
+        methodContext.inputTypeFullName = inputMessage.pojoFullName();
+        methodContext.outputTypeFullName = outputMessage.pojoFullName();
 
         methodContext.deprecated = methodProto.getOptions() != null && methodProto.getOptions().getDeprecated();
         methodContext.isManyInput = methodProto.getClientStreaming();

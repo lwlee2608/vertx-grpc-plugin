@@ -5,6 +5,9 @@ package {{packageName}};
 import com.google.protobuf.*;
 import lombok.Data;
 import lombok.experimental.Accessors;
+{{#imports}}
+import {{.}};
+{{/imports}}
 
 @Data
 @Accessors(chain = true)
@@ -18,7 +21,12 @@ public class {{className}} {
 {{#fields}}
 {{#isNullable}}
         if (pojo.{{name}} != null) {
+{{#isMessage}}
+            builder.{{setter}}({{javaType}}.toProto(pojo.{{name}}));
+{{/isMessage}}
+{{^isMessage}}
             builder.{{setter}}({{nullableType}}.of(pojo.{{name}}));
+{{/isMessage}}
         }
 {{/isNullable}}
 {{^isNullable}}
@@ -33,7 +41,12 @@ public class {{className}} {
 {{#fields}}
 {{#isNullable}}
         if (proto.{{hasFunction}}()) {
+{{#isMessage}}
+            pojo.{{setter}}({{javaType}}.fromProto(proto.{{getter}}()));
+{{/isMessage}}
+{{^isMessage}}
             pojo.{{setter}}(proto.{{getter}}().getValue());
+{{/isMessage}}
         }
 {{/isNullable}}
 {{^isNullable}}

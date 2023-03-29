@@ -56,4 +56,15 @@ message HelloReply {
   int32 id = 2;
   google.protobuf.StringValue address = 3;
   google.protobuf.Int32Value age = 4;
+  Payload payload = 5;
+}
+message Payload {
+  PayloadType type = 1;
+  bytes body = 2;
+}
+
+enum PayloadType {
+  COMPRESSABLE = 0;
+  UNCOMPRESSABLE = 1;
+  RANDOM = 2;
 }

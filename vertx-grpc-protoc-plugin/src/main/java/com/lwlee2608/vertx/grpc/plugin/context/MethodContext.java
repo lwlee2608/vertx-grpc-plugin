@@ -5,10 +5,14 @@ import com.lwlee2608.vertx.grpc.plugin.Util;
 
 public class MethodContext {
     public String methodName;
+
     public String inputType;
     public String outputType;
     public String inputTypeFullName;
     public String outputTypeFullName;
+    public MessageContext inputMessage;
+    public MessageContext outputMessage;
+
     public boolean deprecated;
     public boolean isManyInput;
     public boolean isManyOutput;
