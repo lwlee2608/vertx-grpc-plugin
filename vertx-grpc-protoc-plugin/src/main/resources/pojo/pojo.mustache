@@ -1,6 +1,6 @@
-{{#packageName}}
-package {{packageName}};
-{{/packageName}}
+{{#pojoPackageName}}
+package {{pojoPackageName}};
+{{/pojoPackageName}}
 
 import com.google.protobuf.*;
 import lombok.Data;
@@ -13,8 +13,8 @@ public class {{className}} {
     private {{javaType}} {{camelCaseName}};
 {{/fields}}
 
-    static public {{protoObject}} toProto({{className}} pojo) {
-        {{protoObject}}.Builder builder = {{protoObject}}.newBuilder();
+    static public {{fullName}} toProto({{className}} pojo) {
+        {{fullName}}.Builder builder = {{fullName}}.newBuilder();
 {{#fields}}
 {{#isNullable}}
         if (pojo.{{camelCaseName}} != null) {
@@ -28,7 +28,7 @@ public class {{className}} {
         return builder.build();
     }
 
-    static public {{className}} fromProto({{protoObject}} proto) {
+    static public {{className}} fromProto({{fullName}} proto) {
         {{className}} pojo = new {{className}}();
 {{#fields}}
 {{#isNullable}}

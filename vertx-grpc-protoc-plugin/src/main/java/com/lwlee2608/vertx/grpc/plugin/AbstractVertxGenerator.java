@@ -17,7 +17,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class AbstractVertxGenerator extends Generator {
@@ -28,6 +30,8 @@ public class AbstractVertxGenerator extends Generator {
 
     private final String clientTemplate;
     private final String serverTemplate;
+
+    private final Map<String, MessageContext> pojoTypeMap = new HashMap<>();
 
     public AbstractVertxGenerator(String clientTemplate, String serverTemplate) {
         this.clientTemplate = clientTemplate;
@@ -61,7 +65,12 @@ public class AbstractVertxGenerator extends Generator {
                     String packageName = extractPackageName(fileProto);
                     return fileProto.getMessageTypeList()
                             .stream()
-                            .map(msg -> buildMessageContext(msg, packageName));
+                            .map(msg -> {
+                                MessageContext messageContext = buildMessageContext(msg, packageName);
+                                String key = "." + fileProto.getPackage() + "." + msg.getName();
+                                pojoTypeMap.put(key, messageContext);
+                                return messageContext;
+                            });
                 })
                 .collect(Collectors.toList()));
 
@@ -92,10 +101,10 @@ public class AbstractVertxGenerator extends Generator {
     private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName) {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
-        messageContext.packageName = packageName + ".pojo";
         messageContext.fileName = messageContext.name + ".java";
         messageContext.className = messageContext.name;
-        messageContext.protoObject = packageName + "." + messageContext.name;
+        messageContext.packageName = packageName;
+        messageContext.pojoPackageName = packageName + ".pojo";
         // populate fields
         descriptor.getFieldList().forEach(fieldDescriptor -> {
             FieldContext fieldContext = new FieldContext();
@@ -233,8 +242,13 @@ public class AbstractVertxGenerator extends Generator {
     private MethodContext buildMethodContext(DescriptorProtos.MethodDescriptorProto methodProto, ProtoTypeMap typeMap, List<DescriptorProtos.SourceCodeInfo.Location> locations, int methodNumber) {
         MethodContext methodContext = new MethodContext();
         methodContext.methodName = Util.camelCase(methodProto.getName());
-        methodContext.inputType = typeMap.toJavaTypeName(methodProto.getInputType());
-        methodContext.outputType = typeMap.toJavaTypeName(methodProto.getOutputType());
+
+        methodContext.inputType = pojoTypeMap.get(methodProto.getInputType()).pojoFullName();
+        methodContext.outputType = pojoTypeMap.get(methodProto.getOutputType()).pojoFullName();
+        // delete me
+//        methodContext.inputType = typeMap.toJavaTypeName(methodProto.getInputType());
+//        methodContext.outputType = typeMap.toJavaTypeName(methodProto.getOutputType());
+
         methodContext.deprecated = methodProto.getOptions() != null && methodProto.getOptions().getDeprecated();
         methodContext.isManyInput = methodProto.getClientStreaming();
         methodContext.isManyOutput = methodProto.getServerStreaming();
@@ -316,7 +330,7 @@ public class AbstractVertxGenerator extends Generator {
 
     // TODO combine
     private String absoluteFileName(MessageContext ctx) {
-        String dir = ctx.packageName.replace('.', '/');
+        String dir = ctx.pojoPackageName.replace('.', '/');
         if (Strings.isNullOrEmpty(dir)) {
             return ctx.fileName;
         } else {

@@ -47,12 +47,13 @@ service Greeter {
 // The request message containing the user's name.
 message HelloRequest {
   string name = 1;
-  int32 age = 2;
-  google.protobuf.StringValue address = 3;
-  google.protobuf.Int32Value count = 4;
+  google.protobuf.Int32Value count = 2;
 }
 
 // The response message containing the greetings
 message HelloReply {
   string message = 1;
+  int32 id = 2;
+  google.protobuf.StringValue address = 3;
+  google.protobuf.Int32Value age = 4;
 }

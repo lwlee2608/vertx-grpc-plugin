@@ -9,5 +9,13 @@ public class MessageContext {
     public String className;
     public String name;
     public final List<FieldContext> fields = new ArrayList<>();
-    public String protoObject;
+    public String pojoPackageName;
+
+    public String pojoFullName() {
+        return pojoPackageName + "." + className;
+    }
+
+    public String fullName() {
+        return packageName + "." + className;
+    }
 }

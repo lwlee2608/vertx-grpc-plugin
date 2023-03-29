@@ -34,8 +34,8 @@ public class {{className}}  {
     public {{className}} callHandlers({{serviceName}}Api implementation) {
 {{#unaryMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
-            request.handler(req -> implementation.{{methodName}}(req)
-                    .doOnSuccess(resp -> request.response().end(resp))
+            request.handler(req -> implementation.{{methodName}}({{inputType}}.fromProto(req))
+                    .doOnSuccess(resp -> request.response().end({{outputType}}.toProto(resp)))
                     .subscribe());
         });
 {{/unaryMethods}}

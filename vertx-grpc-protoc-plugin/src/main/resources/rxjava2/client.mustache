@@ -21,11 +21,11 @@ public class {{className}} {
     public Single<{{outputType}}> {{methodName}}({{inputType}} request) {
         return Single.create(emitter ->
                 client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-                            req.end(request);
+                            req.end({{inputType}}.toProto(request));
                             return req.response().compose(resp -> resp.last());
                         })
                         .onFailure(error -> emitter.onError(error))
-                        .onSuccess(resp -> emitter.onSuccess(resp)));
+                        .onSuccess(resp -> emitter.onSuccess({{outputType}}.fromProto(resp))));
     }
 
 {{/unaryMethods}}
