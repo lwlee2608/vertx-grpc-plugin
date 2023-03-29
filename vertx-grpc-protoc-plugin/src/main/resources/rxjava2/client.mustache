@@ -17,6 +17,7 @@ public class {{className}} {
         this.socketAddress = socketAddress;
     }
 
+{{#service}}
 {{#unaryMethods}}
     public Single<{{outputType}}> {{methodName}}({{inputType}} request) {
         return Single.create(emitter ->
@@ -75,4 +76,5 @@ public class {{className}} {
     }
 
 {{/manyManyMethods}}
+{{/service}}
 }

@@ -16,6 +16,7 @@ public class {{className}}  {
         this.server = GrpcServer.server(vertx);
     }
 
+{{#service}}
     public interface {{serviceName}}Api {
 {{#unaryMethods}}
         Single<{{outputType}}> {{methodName}}({{inputType}} request);
@@ -74,4 +75,5 @@ public class {{className}}  {
     public Handler<HttpServerRequest> getGrpcServer() {
         return server;
     }
+{{/service}}
 }

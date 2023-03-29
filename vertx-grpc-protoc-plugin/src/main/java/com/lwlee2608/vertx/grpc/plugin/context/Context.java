@@ -4,6 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Context {
-    public final List<ServiceContext> services = new ArrayList<>();
+    public final List<ComponentContext> components = new ArrayList<>();
     public final List<MessageContext> messages = new ArrayList<>();
 }

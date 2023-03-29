@@ -4,9 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MessageContext {
-    public String fileName;
-    public String packageName;
     public String className;
+    public String packageName;
     public String name;
     public final List<FieldContext> fields = new ArrayList<>();
     public String pojoPackageName;

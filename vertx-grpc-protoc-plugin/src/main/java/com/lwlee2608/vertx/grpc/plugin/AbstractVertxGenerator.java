@@ -4,6 +4,8 @@ import com.google.common.base.Strings;
 import com.google.common.html.HtmlEscapers;
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.compiler.PluginProtos;
+import com.lwlee2608.vertx.grpc.plugin.context.ComponentContext;
+import com.lwlee2608.vertx.grpc.plugin.context.ComponentType;
 import com.lwlee2608.vertx.grpc.plugin.context.Context;
 import com.lwlee2608.vertx.grpc.plugin.context.FieldContext;
 import com.lwlee2608.vertx.grpc.plugin.context.MessageContext;
@@ -31,6 +33,7 @@ public class AbstractVertxGenerator extends Generator {
     private final String clientTemplate;
     private final String serverTemplate;
 
+    // A replacement for the original ProtoTypeMap, we need to store the entire MessageContext
     private final Map<String, MessageContext> pojoTypeMap = new HashMap<>();
 
     public AbstractVertxGenerator(String clientTemplate, String serverTemplate) {
@@ -74,26 +77,50 @@ public class AbstractVertxGenerator extends Generator {
                 })
                 .collect(Collectors.toList()));
 
-        context.services.addAll(findServices(protosToGenerate, typeMap));
+        context.components.addAll(buildComponents(protosToGenerate, typeMap));
         return generateFiles(context);
     }
 
-    private List<ServiceContext> findServices(List<DescriptorProtos.FileDescriptorProto> protos, ProtoTypeMap typeMap) {
-        List<ServiceContext> contexts = new ArrayList<>();
+    private List<ComponentContext> buildComponents(List<DescriptorProtos.FileDescriptorProto> protos, ProtoTypeMap typeMap) {
+        List<ComponentContext> contexts = new ArrayList<>();
 
         protos.forEach(fileProto -> {
-            for (int serviceNumber = 0; serviceNumber < fileProto.getServiceCount(); serviceNumber++) {
-                ServiceContext serviceContext = buildServiceContext(
-                        fileProto.getService(serviceNumber),
-                        typeMap,
-                        fileProto.getSourceCodeInfo().getLocationList(),
-                        serviceNumber
-                );
-                serviceContext.protoName = fileProto.getName();
-                serviceContext.packageName = extractPackageName(fileProto);
-                contexts.add(serviceContext);
-            }
+            findServices(fileProto, typeMap).forEach(service -> {
+                String packageName = extractPackageName(fileProto);
+                // Client
+                ComponentContext clientContext = new ComponentContext();
+                clientContext.type = ComponentType.Client;
+                clientContext.service = service;
+                clientContext.className = CLASS_PREFIX + service.serviceName + "GrpcClient";
+                clientContext.packageName = packageName;
+                contexts.add(clientContext);
+
+                // Server
+                ComponentContext serverContext = new ComponentContext();
+                serverContext.type = ComponentType.Server;
+                serverContext.service = service;
+                serverContext.className = CLASS_PREFIX + service.serviceName + "GrpcServer";
+                serverContext.packageName = packageName;
+                contexts.add(serverContext);
+            });
         });
+
+        return contexts;
+    }
+
+    private List<ServiceContext> findServices(DescriptorProtos.FileDescriptorProto fileProto, ProtoTypeMap typeMap) {
+        List<ServiceContext> contexts = new ArrayList<>();
+
+        for (int serviceNumber = 0; serviceNumber < fileProto.getServiceCount(); serviceNumber++) {
+            ServiceContext serviceContext = buildServiceContext(
+                    fileProto.getService(serviceNumber),
+                    typeMap,
+                    fileProto.getSourceCodeInfo().getLocationList(),
+                    serviceNumber
+            );
+            serviceContext.protoName = fileProto.getName();
+            contexts.add(serviceContext);
+        }
 
         return contexts;
     }
@@ -101,7 +128,6 @@ public class AbstractVertxGenerator extends Generator {
     private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName) {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
-        messageContext.fileName = messageContext.name + ".java";
         messageContext.className = messageContext.name;
         messageContext.packageName = packageName;
         messageContext.pojoPackageName = packageName + ".pojo";
@@ -273,14 +299,14 @@ public class AbstractVertxGenerator extends Generator {
                         .map(this::buildPojo)
                         .collect(Collectors.toList());
 
-        List<PluginProtos.CodeGeneratorResponse.File> serviceFiles =
-                context.services.stream()
-                        .map(this::buildFiles)
-                        .flatMap(Collection::stream)
+        List<PluginProtos.CodeGeneratorResponse.File> componentFiles =
+                context.components.stream()
+                        .map(this::buildFile)
+//                        .flatMap(Collection::stream)
                         .collect(Collectors.toList());
 
         files.addAll(pojoFiles);
-        files.addAll(serviceFiles);
+        files.addAll(componentFiles);
         return files;
     }
 
@@ -293,25 +319,9 @@ public class AbstractVertxGenerator extends Generator {
                 .build();
     }
 
-    private List<PluginProtos.CodeGeneratorResponse.File> buildFiles(ServiceContext context) {
-        return List.of(
-                buildClientFile(context),
-                buildServerFile(context));
-    }
-
-    private PluginProtos.CodeGeneratorResponse.File buildClientFile(ServiceContext context) {
-        context.fileName = CLASS_PREFIX + context.serviceName + "GrpcClient.java";
-        context.className = CLASS_PREFIX + context.serviceName + "GrpcClient";
-        return buildFile(context, applyTemplate(clientTemplate, context));
-    }
-
-    private PluginProtos.CodeGeneratorResponse.File buildServerFile(ServiceContext context) {
-        context.fileName = CLASS_PREFIX + context.serviceName + "GrpcServer.java";
-        context.className = CLASS_PREFIX + context.serviceName + "GrpcServer";
-        return buildFile(context, applyTemplate(serverTemplate, context));
-    }
-
-    private PluginProtos.CodeGeneratorResponse.File buildFile(ServiceContext context, String content) {
+    private PluginProtos.CodeGeneratorResponse.File buildFile(ComponentContext context) {
+        String template = context.type == ComponentType.Server ? serverTemplate : clientTemplate;
+        String content = applyTemplate(template, context);
         return PluginProtos.CodeGeneratorResponse.File
                 .newBuilder()
                 .setName(absoluteFileName(context))
@@ -319,22 +329,24 @@ public class AbstractVertxGenerator extends Generator {
                 .build();
     }
 
-    private String absoluteFileName(ServiceContext ctx) {
+    private String absoluteFileName(ComponentContext ctx) {
         String dir = ctx.packageName.replace('.', '/');
+        String fileName = ctx.className + ".java";
         if (Strings.isNullOrEmpty(dir)) {
-            return ctx.fileName;
+            return fileName;
         } else {
-            return dir + "/" + ctx.fileName;
+            return dir + "/" + fileName;
         }
     }
 
     // TODO combine
     private String absoluteFileName(MessageContext ctx) {
         String dir = ctx.pojoPackageName.replace('.', '/');
+        String fileName = ctx.className + ".java";
         if (Strings.isNullOrEmpty(dir)) {
-            return ctx.fileName;
+            return fileName;
         } else {
-            return dir + "/" + ctx.fileName;
+            return dir + "/" + fileName;
         }
     }
 

@@ -6,10 +6,7 @@ import java.util.stream.Collectors;
 
 public class ServiceContext {
     // CHECKSTYLE DISABLE VisibilityModifier FOR 8 LINES
-    public String fileName;
     public String protoName;
-    public String packageName;
-    public String className;
     public String serviceName;
     public boolean deprecated;
     public String javaDoc;
