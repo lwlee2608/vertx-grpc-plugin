@@ -27,46 +27,21 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+// Message definitions to be used by integration test service definitions.
+
 syntax = "proto3";
 
 import "google/protobuf/wrappers.proto";
-import "messages.proto";
 
 option java_multiple_files = true;
-option java_package = "io.grpc.examples.helloworld";
-option java_outer_classname = "HelloWorldProto";
-option objc_class_prefix = "HLW";
+option java_package = "io.grpc.examples.model";
 
-package helloworld;
+package model;
 
-// The greeting service definition.
-service Greeter {
-  // Sends a greeting
-  rpc SayHello (HelloRequest) returns (HelloReply) {}
+message EchoStatus {
+  int32 code = 1;
+  google.protobuf.StringValue message = 2;
 }
-
-// The request message containing the user's name.
-message HelloRequest {
-  string name = 1;
-  google.protobuf.Int32Value count = 2;
-}
-
-// The response message containing the greetings
-message HelloReply {
-  string message = 1;
-  int32 id = 2;
-  google.protobuf.StringValue address = 3;
-  google.protobuf.Int32Value age = 4;
-  Payload payload = 5;
-  model.EchoStatus status = 6;
-}
-message Payload {
-  PayloadType type = 1;
-  bytes body = 2;
-}
-
-enum PayloadType {
-  COMPRESSABLE = 0;
-  UNCOMPRESSABLE = 1;
-  RANDOM = 2;
+message SimpleRequest {
+  int32 code = 1;
 }

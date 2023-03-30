@@ -68,13 +68,22 @@ public class AbstractVertxGenerator extends Generator {
                     return fileProto.getMessageTypeList()
                             .stream()
                             .map(msg -> {
-                                MessageContext messageContext = buildMessageContext(msg, packageName);
+                                MessageContext messageContext = buildMessageContext(msg, packageName, typeMap);
                                 String key = "." + fileProto.getPackage() + "." + msg.getName();
                                 pojoTypeMap.put(key, messageContext);
                                 return messageContext;
                             });
                 })
                 .collect(Collectors.toList()));
+
+        // update pojo import
+        pojoTypeMap.forEach((typeName, messageContext) -> {
+            messageContext.fields.forEach(fieldContext -> {
+                if (fieldContext.isMessage) {
+                    messageContext.imports.add(pojoTypeMap.get(fieldContext.protoTypeName).packageName + "." + fieldContext.javaType);
+                }
+            });
+        });
 
         context.components.addAll(buildComponents(protosToGenerate, typeMap));
         return generateFiles(context);
@@ -136,16 +145,18 @@ public class AbstractVertxGenerator extends Generator {
         return contexts;
     }
 
-    private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName) {
+    private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName, ProtoTypeMap typeMap) {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
         messageContext.className = messageContext.name;
         messageContext.packageName = packageName + ".pojo";
         messageContext.protoPackage = packageName;
+
         // populate fields
         descriptor.getFieldList().forEach(fieldDescriptor -> {
             FieldContext fieldContext = new FieldContext();
             fieldContext.protoName = fieldDescriptor.getName();
+            fieldContext.protoTypeName = fieldDescriptor.getTypeName();
             fieldContext.name = Util.camelCase(fieldDescriptor.getName());
             fieldContext.javaType = getJavaType(fieldDescriptor);
             fieldContext.isEnum = fieldDescriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_ENUM;
@@ -155,12 +166,12 @@ public class AbstractVertxGenerator extends Generator {
                 // TODO Enum type may be defined in another proto file
                 messageContext.imports.add(packageName + "." + fieldContext.javaType);
             }
-            if (fieldContext.isNullable) {
-                String typeName = fieldDescriptor.getTypeName();
-                fieldContext.nullableType = Util.getSimpleClass(typeName);
+            if (fieldContext.isNullable && !fieldContext.isMessage) {
+                fieldContext.nullableType = Util.getSimpleClass(fieldDescriptor.getTypeName());
+                messageContext.imports.add("com.google.protobuf." + fieldContext.nullableType);
             }
-            if (fieldContext.isMessage) {
-                fieldContext.isNullable = true; // TODO simplify this
+            if (fieldContext.javaType.equals("ByteString")) {
+                messageContext.imports.add("com.google.protobuf.ByteString");
             }
             messageContext.fields.add(fieldContext);
         });
@@ -215,22 +226,7 @@ public class AbstractVertxGenerator extends Generator {
     }
 
     private boolean isNullable(DescriptorProtos.FieldDescriptorProto descriptor) {
-        if (descriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_MESSAGE) {
-            String typeName = descriptor.getTypeName();
-            switch (typeName) {
-                case ".google.protobuf.Int32Value":
-                case ".google.protobuf.UInt32Value":
-                case ".google.protobuf.Int64Value":
-                case ".google.protobuf.UInt64Value":
-                case ".google.protobuf.StringValue":
-                case ".google.protobuf.BoolValue":
-                case ".google.protobuf.FloatValue":
-                case ".google.protobuf.DoubleValue":
-                case ".google.protobuf.BytesValue":
-                    return true;
-            }
-        }
-        return false;
+        return descriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_MESSAGE;
     }
 
     private boolean isMessage(DescriptorProtos.FieldDescriptorProto descriptor) {

@@ -4,6 +4,7 @@ import com.lwlee2608.vertx.grpc.plugin.Util;
 
 public class FieldContext {
     public String protoName;
+    public String protoTypeName;
     public String name;
     public String javaType;
     public String nullableType;
