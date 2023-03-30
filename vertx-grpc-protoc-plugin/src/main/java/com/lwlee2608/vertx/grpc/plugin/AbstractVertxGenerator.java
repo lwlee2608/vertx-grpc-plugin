@@ -76,7 +76,7 @@ public class AbstractVertxGenerator extends Generator {
                 })
                 .collect(Collectors.toList()));
 
-        // update pojo import
+        // update pojo imports
         pojoTypeMap.forEach((typeName, messageContext) -> {
             messageContext.fields.forEach(fieldContext -> {
                 if (fieldContext.isMessage) {
@@ -158,10 +158,18 @@ public class AbstractVertxGenerator extends Generator {
             fieldContext.protoName = fieldDescriptor.getName();
             fieldContext.protoTypeName = fieldDescriptor.getTypeName();
             fieldContext.name = Util.camelCase(fieldDescriptor.getName());
-            fieldContext.javaType = getJavaType(fieldDescriptor);
             fieldContext.isEnum = fieldDescriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_ENUM;
             fieldContext.isNullable = isNullable(fieldDescriptor);
             fieldContext.isMessage = isMessage(fieldDescriptor);
+            fieldContext.isList = isList(fieldDescriptor);
+            if (fieldContext.isList) {
+                fieldContext.javaType = getRepeatedJavaType(fieldDescriptor);
+                messageContext.imports.add("java.util.List");
+                messageContext.imports.add("java.util.ArrayList");
+            } else {
+                fieldContext.javaType = getJavaType(fieldDescriptor);
+            }
+
             if (fieldContext.isEnum) {
                 // TODO Enum type may be defined in another proto file
                 messageContext.imports.add(packageName + "." + fieldContext.javaType);
@@ -225,6 +233,18 @@ public class AbstractVertxGenerator extends Generator {
         }
     }
 
+    private String getRepeatedJavaType(DescriptorProtos.FieldDescriptorProto descriptor) {
+        switch (descriptor.getType()) {
+            case TYPE_INT32:
+            case TYPE_UINT32:
+            case TYPE_SFIXED32:
+            case TYPE_SINT32:
+            case TYPE_FIXED32: return "List<Integer>";
+            default:
+                throw new RuntimeException("Repeated type '" + descriptor.getType() + "' Not supported yet");
+        }
+    }
+
     private boolean isNullable(DescriptorProtos.FieldDescriptorProto descriptor) {
         return descriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_MESSAGE;
     }
@@ -248,6 +268,14 @@ public class AbstractVertxGenerator extends Generator {
             }
         }
         return false;
+    }
+
+    private boolean isList(DescriptorProtos.FieldDescriptorProto descriptor) {
+        if (descriptor.hasLabel() && descriptor.getLabel() == DescriptorProtos.FieldDescriptorProto.Label.LABEL_REPEATED) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private String extractPackageName(DescriptorProtos.FileDescriptorProto proto) {

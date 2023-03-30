@@ -12,7 +12,7 @@ import {{.}};
 @Accessors(chain = true)
 public class {{className}} {
 {{#fields}}
-    private {{javaType}} {{name}};
+    {{{declareField}}}
 {{/fields}}
 
     static public {{protoFullName}} toProto({{className}} pojo) {
@@ -20,16 +20,11 @@ public class {{className}} {
 {{#fields}}
 {{#isNullable}}
         if (pojo.{{name}} != null) {
-{{#isMessage}}
-            builder.{{setter}}({{javaType}}.toProto(pojo.{{name}}));
-{{/isMessage}}
-{{^isMessage}}
-            builder.{{setter}}({{nullableType}}.of(pojo.{{name}}));
-{{/isMessage}}
+            {{toProtoFunction}}
         }
 {{/isNullable}}
 {{^isNullable}}
-        builder.{{setter}}(pojo.{{name}});
+        {{toProtoFunction}}
 {{/isNullable}}
 {{/fields}}
         return builder.build();
@@ -40,16 +35,11 @@ public class {{className}} {
 {{#fields}}
 {{#isNullable}}
         if (proto.{{hasFunction}}()) {
-{{#isMessage}}
-            pojo.{{setter}}({{javaType}}.fromProto(proto.{{getter}}()));
-{{/isMessage}}
-{{^isMessage}}
-            pojo.{{setter}}(proto.{{getter}}().getValue());
-{{/isMessage}}
+            {{fromProtoFunction}}
         }
 {{/isNullable}}
 {{^isNullable}}
-        pojo.{{setter}}(proto.{{getter}}());
+        {{fromProtoFunction}}
 {{/isNullable}}
 {{/fields}}
         return pojo;

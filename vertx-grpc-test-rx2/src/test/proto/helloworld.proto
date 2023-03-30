@@ -59,6 +59,7 @@ message HelloReply {
   google.protobuf.Int32Value age = 4;
   Payload payload = 5;
   model.EchoStatus status = 6;
+  repeated int32 arrays = 7;
 }
 message Payload {
   PayloadType type = 1;
