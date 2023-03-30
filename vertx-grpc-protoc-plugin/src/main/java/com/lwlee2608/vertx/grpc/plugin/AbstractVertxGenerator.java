@@ -251,7 +251,7 @@ public class AbstractVertxGenerator extends Generator {
             case TYPE_STRING: return "\"\"";
             case TYPE_MESSAGE: return "null";
             case TYPE_ENUM: {
-                return Util.getSimpleClass(descriptor.getTypeName()) + ".UNRECOGNIZED";
+                return Util.getSimpleClass(descriptor.getTypeName()) + ".valueOf(0)";
             }
             case TYPE_BYTES: return "ByteString.EMPTY";
             case TYPE_GROUP:

@@ -1,11 +1,19 @@
 package com.lwlee2608.vertx.grpc.plugin;
 
-/*
 import com.google.protobuf.ByteString;
 import com.google.protobuf.EmptyProtos;
+import io.grpc.testing.integration.CompressionType;
 import io.grpc.testing.integration.Messages;
-import io.grpc.testing.integration.VertxTestServiceGrpcClient;
-import io.grpc.testing.integration.VertxTestServiceGrpcServer;
+import io.grpc.testing.integration.PayloadType;
+import io.grpc.testing.integration.component.VertxTestServiceGrpcClient;
+import io.grpc.testing.integration.component.VertxTestServiceGrpcServer;
+import io.grpc.testing.integration.pojo.Payload;
+import io.grpc.testing.integration.pojo.SimpleRequest;
+import io.grpc.testing.integration.pojo.SimpleResponse;
+import io.grpc.testing.integration.pojo.StreamingInputCallRequest;
+import io.grpc.testing.integration.pojo.StreamingInputCallResponse;
+import io.grpc.testing.integration.pojo.StreamingOutputCallRequest;
+import io.grpc.testing.integration.pojo.StreamingOutputCallResponse;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.vertx.core.Vertx;
@@ -18,6 +26,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -29,6 +39,7 @@ import java.util.List;
 @ExtendWith(VertxExtension.class)
 @SuppressWarnings("ResultOfMethodCallIgnored")
 public class GoogleTest {
+    private static final Logger logger = LoggerFactory.getLogger(GoogleTest.class);
 
     VertxTestServiceGrpcClient client;
     int port;
@@ -40,36 +51,34 @@ public class GoogleTest {
         // Create gRPC Server
         VertxTestServiceGrpcServer server = new VertxTestServiceGrpcServer(vertx)
                 .callHandlers(new VertxTestServiceGrpcServer.TestServiceApi() {
-                    @Override
-                    public Single<EmptyProtos.Empty> emptyCall(EmptyProtos.Empty request) {
-                        return Single.error(new RuntimeException("Not yet implemented"));
-                    }
+//                    @Override
+//                    public Single<EmptyProtos.Empty> emptyCall(EmptyProtos.Empty request) {
+//                        return Single.error(new RuntimeException("Not yet implemented"));
+//                    }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
                     @Override
-                    public Single<Messages.SimpleResponse> unaryCall(Messages.SimpleRequest request) {
-                        return Single.just(Messages.SimpleResponse.newBuilder()
-                                .setUsername("FooBar")
-                                .build());
+                    public Single<SimpleResponse> unaryCall(SimpleRequest request) {
+                        return Single.just(new SimpleResponse()
+                                .setUsername("FooBar"));
                     }
 
-                    @Override
-                    public Single<EmptyProtos.Empty> unimplementedCall(EmptyProtos.Empty request) {
-                        return Single.error(new RuntimeException("Not yet implemented"));
-                    }
+//                    @Override
+//                    public Single<EmptyProtos.Empty> unimplementedCall(EmptyProtos.Empty request) {
+//                        return Single.error(new RuntimeException("Not yet implemented"));
+//                    }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingInputCall(stream StreamingInputCallRequest) returns (StreamingInputCallResponse);
                     @Override
-                    public Single<Messages.StreamingInputCallResponse> streamingInputCall(Observable<Messages.StreamingInputCallRequest> request) {
+                    public Single<StreamingInputCallResponse> streamingInputCall(Observable<StreamingInputCallRequest> request) {
                         return Single.create(emitter -> {
-                            List<Messages.StreamingInputCallRequest> list = new ArrayList<>();
+                            List<StreamingInputCallRequest> list = new ArrayList<>();
                             request.doOnNext(list::add)
                                     .doOnComplete(() -> {
-                                        Messages.StreamingInputCallResponse resp = Messages.StreamingInputCallResponse.newBuilder()
-                                                .setAggregatedPayloadSize(list.size())
-                                                .build();
+                                        StreamingInputCallResponse resp = new StreamingInputCallResponse()
+                                                .setAggregatedPayloadSize(list.size());
                                         emitter.onSuccess(resp);
                                     })
                                     .subscribe();
@@ -79,14 +88,12 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingOutputCall(StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public Observable<Messages.StreamingOutputCallResponse> streamingOutputCall(Messages.StreamingOutputCallRequest request) {
+                    public Observable<StreamingOutputCallResponse> streamingOutputCall(StreamingOutputCallRequest request) {
                         return Observable.create(emitter -> {
-                            emitter.onNext(Messages.StreamingOutputCallResponse.newBuilder()
-                                    .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
-                                    .build());
-                            emitter.onNext(Messages.StreamingOutputCallResponse.newBuilder()
-                                    .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
-                                    .build());
+                            emitter.onNext(new StreamingOutputCallResponse()
+                                    .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8))));
+                            emitter.onNext(new StreamingOutputCallResponse()
+                                    .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8))));
                             emitter.onComplete();
                         });
                     }
@@ -94,22 +101,20 @@ public class GoogleTest {
                     // Implement following RPC defined in test.proto:
                     //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public Observable<Messages.StreamingOutputCallResponse> fullDuplexCall(Observable<Messages.StreamingOutputCallRequest> request) {
+                    public Observable<StreamingOutputCallResponse> fullDuplexCall(Observable<StreamingOutputCallRequest> request) {
                         return Observable.create(emitter -> {
                             request.subscribe(req -> {}, error -> {}, () -> {
-                                emitter.onNext(Messages.StreamingOutputCallResponse.newBuilder()
-                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
-                                        .build());
-                                emitter.onNext(Messages.StreamingOutputCallResponse.newBuilder()
-                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
-                                        .build());
+                                emitter.onNext(new StreamingOutputCallResponse()
+                                        .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8))));
+                                emitter.onNext(new StreamingOutputCallResponse()
+                                        .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8))));
                                 emitter.onComplete();
                             });
                         });
                     }
 
                     @Override
-                    public Observable<Messages.StreamingOutputCallResponse> halfDuplexCall(Observable<Messages.StreamingOutputCallRequest> request) {
+                    public Observable<StreamingOutputCallResponse> halfDuplexCall(Observable<StreamingOutputCallRequest> request) {
                         return Observable.error(new RuntimeException("Not yet implemented"));
                     }
                 });
@@ -126,9 +131,8 @@ public class GoogleTest {
 
     @Test
     void testUnaryUnary(VertxTestContext should) {
-        client.unaryCall(Messages.SimpleRequest.newBuilder()
-                        .setFillUsername(true)
-                        .build())
+        client.unaryCall(new SimpleRequest()
+                        .setFillUsername(true))
                 .doOnSuccess(reply -> Assertions.assertEquals("FooBar", reply.getUsername()))
                 .subscribe(reply -> should.completeNow(), should::failNow);
     }
@@ -136,12 +140,10 @@ public class GoogleTest {
     @Test
     void testManyUnary(VertxTestContext should) {
         client.streamingInputCall(Observable.create(emitter -> {
-                    emitter.onNext(Messages.StreamingInputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-1", StandardCharsets.UTF_8)).build())
-                            .build());
-                    emitter.onNext(Messages.StreamingInputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-2", StandardCharsets.UTF_8)).build())
-                            .build());
+                    emitter.onNext(new StreamingInputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingInputRequest-1", StandardCharsets.UTF_8))));
+                    emitter.onNext(new StreamingInputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingInputRequest-2", StandardCharsets.UTF_8))));
                     emitter.onComplete();
                 }))
                 .doOnSuccess(reply -> Assertions.assertEquals(2, reply.getAggregatedPayloadSize()))
@@ -150,10 +152,9 @@ public class GoogleTest {
 
     @Test
     void testUnaryMany(VertxTestContext should) {
-        Messages.StreamingOutputCallRequest request = Messages.StreamingOutputCallRequest.newBuilder()
-                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)).build())
-                .build();
-        List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
+        StreamingOutputCallRequest request = new StreamingOutputCallRequest()
+                .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)));
+        List<StreamingOutputCallResponse> list = new ArrayList<>();
         client.streamingOutputCall(request)
                 .subscribe(list::add, should::failNow, () -> {
                     Assertions.assertEquals(2, list.size());
@@ -163,14 +164,12 @@ public class GoogleTest {
 
     @Test
     void testManyMany(VertxTestContext should) {
-        List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
+        List<StreamingOutputCallResponse> list = new ArrayList<>();
         client.fullDuplexCall(Observable.create(emitter -> {
-                    emitter.onNext(Messages.StreamingOutputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8)).build())
-                            .build());
-                    emitter.onNext(Messages.StreamingOutputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8)).build())
-                            .build());
+                    emitter.onNext(new StreamingOutputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8))));
+                    emitter.onNext(new StreamingOutputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8))));
                     emitter.onComplete();
                 }))
                 .subscribe(list::add, should::failNow, () -> {
@@ -185,4 +184,3 @@ public class GoogleTest {
         }
     }
 }
-*/

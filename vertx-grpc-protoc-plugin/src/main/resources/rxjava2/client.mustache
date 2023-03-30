@@ -37,12 +37,12 @@ public class {{className}} {
     public Observable<{{outputType}}> {{methodName}}({{inputType}} request) {
         return Observable.create(emitter ->
                 client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-                            req.end(request);
+                            req.end({{inputType}}.toProto(request));
                             return req.response();
                         })
                         .onFailure(error -> emitter.onError(error))
                         .onSuccess(stream -> {
-                            stream.handler(emitter::onNext);
+                            stream.handler(resp -> emitter.onNext({{outputType}}.fromProto(resp)));
                             stream.endHandler($ -> emitter.onComplete());
                         }));
     }
@@ -52,13 +52,13 @@ public class {{className}} {
     public Single<{{outputType}}> {{methodName}}(Observable<{{inputType}}> request) {
         return Single.create(emitter ->
                 client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-                            request.doOnNext(req::write)
+                            request.doOnNext(msg -> req.write({{inputType}}.toProto(msg)))
                                     .doOnComplete(() -> req.end())
                                     .subscribe();
                             return req.response().compose(resp -> resp.last());
                         })
                         .onFailure(error -> emitter.onError(error))
-                        .onSuccess(resp -> emitter.onSuccess(resp)));
+                        .onSuccess(resp -> emitter.onSuccess({{outputType}}.fromProto(resp))));
     }
 
 {{/manyUnaryMethods}}
@@ -66,14 +66,14 @@ public class {{className}} {
     public Observable<{{outputType}}> {{methodName}}(Observable<{{inputType}}> request) {
         return Observable.create(emitter ->
                 client.request(socketAddress, {{serviceName}}Grpc.{{methodNameGetter}}()).compose(req -> {
-                            request.doOnNext(req::write)
+                            request.doOnNext(msg -> req.write({{inputType}}.toProto(msg)))
                                     .doOnComplete(() -> req.end())
                                     .subscribe();
                             return req.response();
                         })
                         .onFailure(error -> emitter.onError(error))
                         .onSuccess(stream -> {
-                            stream.handler(emitter::onNext);
+                            stream.handler(resp -> emitter.onNext({{outputType}}.fromProto(resp)));
                             stream.endHandler($ -> emitter.onComplete());
                         }));
     }
