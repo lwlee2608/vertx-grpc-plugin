@@ -8,6 +8,7 @@ public class FieldContext {
     public String name;
     public String javaType;
     public String nullableType;
+    public String defaultValue;
     public Boolean isEnum;
     public Boolean isNullable;
     public Boolean isMessage;
@@ -35,9 +36,13 @@ public class FieldContext {
 
     public String declareField() {
         if (!isList) {
-            return String.format("private %s %s;", javaType, name);
+            if (isNullable) {
+                return String.format("private %s %s;", javaType, name);
+            } else {
+                return String.format("private %s %s = %s;", javaType, name, defaultValue);
+            }
         } else {
-            return String.format("private %s %s = new ArrayList<>();", javaType, name);
+            return String.format("private List<%s> %s = new ArrayList<>();", javaType, name);
         }
     }
 
@@ -51,7 +56,11 @@ public class FieldContext {
                 return String.format("builder.%s(pojo.%s);", setter(), name);
             }
         } else {
-            return String.format("builder.%s(pojo.%s);", addAll(), name);
+            if (isMessage) {
+                return String.format("builder.%s(pojo.%s.stream().map(%s::toProto).collect(Collectors.toList()));", addAll(), name, javaType);
+            } else {
+                return String.format("builder.%s(pojo.%s);", addAll(), name);
+            }
         }
     }
 
@@ -65,7 +74,11 @@ public class FieldContext {
                 return String.format("pojo.%s(proto.%s());", setter(), getter());
             }
         } else {
-            return String.format("pojo.%s(proto.%s());", setter(), getList());
+            if (isMessage) {
+                return String.format("pojo.%s(proto.%s().stream().map(%s::fromProto).collect(Collectors.toList()));", setter(), getList(), javaType);
+            } else {
+                return String.format("pojo.%s(proto.%s());", setter(), getList());
+            }
         }
     }
 }

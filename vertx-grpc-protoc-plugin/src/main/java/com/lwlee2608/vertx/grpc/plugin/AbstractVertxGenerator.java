@@ -158,16 +158,16 @@ public class AbstractVertxGenerator extends Generator {
             fieldContext.protoName = fieldDescriptor.getName();
             fieldContext.protoTypeName = fieldDescriptor.getTypeName();
             fieldContext.name = Util.camelCase(fieldDescriptor.getName());
+            fieldContext.javaType = getJavaType(fieldDescriptor);
+            fieldContext.defaultValue = getDefaultValue(fieldDescriptor);
             fieldContext.isEnum = fieldDescriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_ENUM;
             fieldContext.isNullable = isNullable(fieldDescriptor);
             fieldContext.isMessage = isMessage(fieldDescriptor);
             fieldContext.isList = isList(fieldDescriptor);
             if (fieldContext.isList) {
-                fieldContext.javaType = getRepeatedJavaType(fieldDescriptor);
                 messageContext.imports.add("java.util.List");
                 messageContext.imports.add("java.util.ArrayList");
-            } else {
-                fieldContext.javaType = getJavaType(fieldDescriptor);
+                messageContext.imports.add("java.util.stream.Collectors");
             }
 
             if (fieldContext.isEnum) {
@@ -188,19 +188,19 @@ public class AbstractVertxGenerator extends Generator {
 
     private String getJavaType(DescriptorProtos.FieldDescriptorProto descriptor) {
         switch (descriptor.getType()) {
-            case TYPE_DOUBLE: return "double";
-            case TYPE_FLOAT: return "float";
+            case TYPE_DOUBLE: return "Double";
+            case TYPE_FLOAT: return "Float";
             case TYPE_INT64:
             case TYPE_FIXED64:
             case TYPE_SFIXED64:
             case TYPE_SINT64:
-            case TYPE_UINT64: return "long";
+            case TYPE_UINT64: return "Long";
             case TYPE_INT32:
             case TYPE_UINT32:
             case TYPE_SFIXED32:
             case TYPE_SINT32:
-            case TYPE_FIXED32: return "int";
-            case TYPE_BOOL: return "boolean";
+            case TYPE_FIXED32: return "Integer";
+            case TYPE_BOOL: return "Boolean";
             case TYPE_STRING: return "String";
             case TYPE_MESSAGE: {
                 String typeName = descriptor.getTypeName();
@@ -233,19 +233,37 @@ public class AbstractVertxGenerator extends Generator {
         }
     }
 
-    private String getRepeatedJavaType(DescriptorProtos.FieldDescriptorProto descriptor) {
+    private String getDefaultValue(DescriptorProtos.FieldDescriptorProto descriptor) {
         switch (descriptor.getType()) {
+            case TYPE_DOUBLE:
+            case TYPE_FLOAT: return "0.0";
+            case TYPE_INT64:
+            case TYPE_FIXED64:
+            case TYPE_SFIXED64:
+            case TYPE_SINT64:
+            case TYPE_UINT64: return "0L";
             case TYPE_INT32:
             case TYPE_UINT32:
             case TYPE_SFIXED32:
             case TYPE_SINT32:
-            case TYPE_FIXED32: return "List<Integer>";
+            case TYPE_FIXED32: return "0";
+            case TYPE_BOOL: return "false";
+            case TYPE_STRING: return "\"\"";
+            case TYPE_MESSAGE: return "null";
+            case TYPE_ENUM: {
+                return Util.getSimpleClass(descriptor.getTypeName()) + ".UNRECOGNIZED";
+            }
+            case TYPE_BYTES: return "ByteString.EMPTY";
+            case TYPE_GROUP:
             default:
-                throw new RuntimeException("Repeated type '" + descriptor.getType() + "' Not supported yet");
+                throw new RuntimeException("Type '" + descriptor.getType() + "' Not supported yet");
         }
     }
 
     private boolean isNullable(DescriptorProtos.FieldDescriptorProto descriptor) {
+        if (isList(descriptor)) {
+            return false; // repeated field must not be nullable
+        }
         return descriptor.getType() == DescriptorProtos.FieldDescriptorProto.Type.TYPE_MESSAGE;
     }
 
