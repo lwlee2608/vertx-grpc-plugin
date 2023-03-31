@@ -65,10 +65,11 @@ public class AbstractVertxGenerator extends Generator {
         context.messages.addAll(protosToGenerate.stream()
                 .flatMap(fileProto -> {
                     String packageName = extractPackageName(fileProto);
+                    String outerClass = extractOuterClass(fileProto);
                     return fileProto.getMessageTypeList()
                             .stream()
                             .map(msg -> {
-                                MessageContext messageContext = buildMessageContext(msg, packageName, typeMap);
+                                MessageContext messageContext = buildMessageContext(msg, packageName, outerClass, typeMap);
                                 String key = "." + fileProto.getPackage() + "." + msg.getName();
                                 pojoTypeMap.put(key, messageContext);
                                 return messageContext;
@@ -145,12 +146,13 @@ public class AbstractVertxGenerator extends Generator {
         return contexts;
     }
 
-    private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName, ProtoTypeMap typeMap) {
+    private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName, String outerClass, ProtoTypeMap typeMap) {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
         messageContext.className = messageContext.name;
         messageContext.packageName = packageName + ".pojo";
         messageContext.protoPackage = packageName;
+        messageContext.outerClass = outerClass;
 
         // populate fields
         descriptor.getFieldList().forEach(fieldDescriptor -> {
@@ -305,6 +307,14 @@ public class AbstractVertxGenerator extends Generator {
             }
         }
 
+        return Strings.nullToEmpty(proto.getPackage());
+    }
+
+    private String extractOuterClass(DescriptorProtos.FileDescriptorProto proto) {
+        DescriptorProtos.FileOptions options = proto.getOptions();
+        if (options != null) {
+            return options.getJavaOuterClassname();
+        }
         return Strings.nullToEmpty(proto.getPackage());
     }
 
