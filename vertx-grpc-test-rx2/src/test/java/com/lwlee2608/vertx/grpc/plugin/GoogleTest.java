@@ -122,7 +122,6 @@ public class GoogleTest {
         HttpServer httpServer = vertx.createHttpServer();
         httpServer.requestHandler(server.getGrpcServer())
                 .rxListen(port)
-//                .blockingGet();
                 .subscribe($ -> should.completeNow(), should::failNow);
 
         // Create gRPC Client
