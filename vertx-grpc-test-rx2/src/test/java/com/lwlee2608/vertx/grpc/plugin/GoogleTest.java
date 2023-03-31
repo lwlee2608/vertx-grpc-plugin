@@ -2,6 +2,7 @@ package com.lwlee2608.vertx.grpc.plugin;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.EmptyProtos;
+import com.google.protobuf.pojo.Empty;
 import io.grpc.testing.integration.CompressionType;
 import io.grpc.testing.integration.Messages;
 import io.grpc.testing.integration.PayloadType;
@@ -51,10 +52,10 @@ public class GoogleTest {
         // Create gRPC Server
         VertxTestServiceGrpcServer server = new VertxTestServiceGrpcServer(vertx)
                 .callHandlers(new VertxTestServiceGrpcServer.TestServiceApi() {
-//                    @Override
-//                    public Single<EmptyProtos.Empty> emptyCall(EmptyProtos.Empty request) {
-//                        return Single.error(new RuntimeException("Not yet implemented"));
-//                    }
+                    @Override
+                    public Single<Empty> emptyCall(Empty request) {
+                        return Single.error(new RuntimeException("Not yet implemented"));
+                    }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
@@ -64,10 +65,10 @@ public class GoogleTest {
                                 .setUsername("FooBar"));
                     }
 
-//                    @Override
-//                    public Single<EmptyProtos.Empty> unimplementedCall(EmptyProtos.Empty request) {
-//                        return Single.error(new RuntimeException("Not yet implemented"));
-//                    }
+                    @Override
+                    public Single<Empty> unimplementedCall(Empty request) {
+                        return Single.error(new RuntimeException("Not yet implemented"));
+                    }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingInputCall(stream StreamingInputCallRequest) returns (StreamingInputCallResponse);
