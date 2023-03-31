@@ -3,7 +3,8 @@
 A new gRPC protoc-plugin using the new [vertx-grpc](https://github.com/eclipse-vertx/vertx-grpc) library. 
 
 ## Compatibility
-* Compatible with vertx 4.3 or newer.
+* `VertxGrpcGenerator` Compatible with vertx 4.3 or newer.
+* `VertxGrpcRx2Generator` Compatible with vertx 4.4 or newer.
 
 ## Usage
 * Install vertx-grpc-protoc-plugin with the [protobuf-maven-plugin](https://www.xolstice.org/protobuf-maven-plugin/examples/protoc-plugin.html).
@@ -11,7 +12,7 @@ A new gRPC protoc-plugin using the new [vertx-grpc](https://github.com/eclipse-v
 ```xml
     <protocPlugin>
         <id>vertx-grpc-protoc-plugin</id>
-        <groupId>com.lwlee2608.vertx.grpc</groupId>
+        <groupId>io.github.lwlee2608</groupId>
         <artifactId>vertx-grpc-protoc-plugin</artifactId>
         <version>[VERSION]</version>
         <mainClass>com.lwlee2608.vertx.grpc.plugin.VertxGrpcGenerator</mainClass>

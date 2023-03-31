@@ -16,11 +16,11 @@ import io.grpc.testing.integration.pojo.StreamingOutputCallRequest;
 import io.grpc.testing.integration.pojo.StreamingOutputCallResponse;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.net.SocketAddress;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.reactivex.core.Vertx;
+import io.vertx.reactivex.core.http.HttpServer;
+import io.vertx.reactivex.core.net.SocketAddress;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -121,9 +121,9 @@ public class GoogleTest {
 
         HttpServer httpServer = vertx.createHttpServer();
         httpServer.requestHandler(server.getGrpcServer())
-                .listen(port)
-                .onSuccess($ -> should.completeNow())
-                .onFailure(should::failNow);
+                .rxListen(port)
+//                .blockingGet();
+                .subscribe($ -> should.completeNow(), should::failNow);
 
         // Create gRPC Client
         client = new VertxTestServiceGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));

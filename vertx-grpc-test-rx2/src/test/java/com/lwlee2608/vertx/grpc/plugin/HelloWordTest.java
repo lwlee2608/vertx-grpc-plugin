@@ -6,11 +6,11 @@ import io.grpc.examples.helloworld.component.VertxGreeterGrpcServer;
 import io.grpc.examples.helloworld.pojo.HelloReply;
 import io.grpc.examples.helloworld.pojo.HelloRequest;
 import io.reactivex.Single;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.net.SocketAddress;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.reactivex.core.Vertx;
+import io.vertx.reactivex.core.http.HttpServer;
+import io.vertx.reactivex.core.net.SocketAddress;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -41,8 +41,9 @@ public class HelloWordTest {
                 });
         HttpServer httpServer = vertx.createHttpServer();
         httpServer.requestHandler(server.getGrpcServer())
-                .listen(port)
-                .onFailure(should::failNow);
+                .rxListen(port)
+                .blockingGet();
+//                .onFailure(should::failNow);
 
         // Create gRPC Client
         VertxGreeterGrpcClient client = new VertxGreeterGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
