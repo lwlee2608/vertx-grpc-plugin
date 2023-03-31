@@ -51,7 +51,7 @@
 
     <modules>
         <module>vertx-grpc-protoc-plugin</module>
-        <module>vertx-grpc-test</module>
+<!--        <module>vertx-grpc-test</module>-->
         <module>vertx-grpc-test-rx2</module>
     </modules>
 

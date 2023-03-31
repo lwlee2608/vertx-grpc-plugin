@@ -72,7 +72,7 @@ public class Util {
      * @param word method name
      * @return lower name
      */
-    public static String mixedLower(String word) {
+    public static String camelCase(String word) {
         StringBuffer w = new StringBuffer();
         w.append(Character.toLowerCase(word.charAt(0)));
 
@@ -98,5 +98,10 @@ public class Util {
         }
 
         return w.toString();
+    }
+
+    public static String getSimpleClass(String fullName) {
+        String[] token = fullName.split("\\.");
+        return token[token.length - 1];
     }
 }

@@ -1,12 +1,18 @@
-package com.lwlee2608.vertx.grpc.plugin;
+package com.lwlee2608.vertx.grpc.plugin.context;
 
 import com.google.common.base.Strings;
+import com.lwlee2608.vertx.grpc.plugin.Util;
 
 public class MethodContext {
-    // CHECKSTYLE DISABLE VisibilityModifier FOR 10 LINES
     public String methodName;
+
     public String inputType;
     public String outputType;
+    public String inputTypeFullName;
+    public String outputTypeFullName;
+    public MessageContext inputMessage;
+    public MessageContext outputMessage;
+
     public boolean deprecated;
     public boolean isManyInput;
     public boolean isManyOutput;
@@ -14,7 +20,7 @@ public class MethodContext {
     public String javaDoc;
 
     public String methodNameGetter() {
-        return Util.mixedLower("get_" + methodName + "_method");
+        return Util.camelCase("get_" + methodName + "_method");
     }
 
     public String methodHeader() {

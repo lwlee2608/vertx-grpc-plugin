@@ -8,6 +8,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.grpc.server.GrpcServer;
+{{#imports}}
+import {{.}};
+{{/imports}}
 
 public class {{className}}  {
     private final GrpcServer server;
@@ -16,6 +19,7 @@ public class {{className}}  {
         this.server = GrpcServer.server(vertx);
     }
 
+{{#service}}
     public interface {{serviceName}}Api {
 {{#unaryMethods}}
         Single<{{outputType}}> {{methodName}}({{inputType}} request);
@@ -34,15 +38,15 @@ public class {{className}}  {
     public {{className}} callHandlers({{serviceName}}Api implementation) {
 {{#unaryMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
-            request.handler(req -> implementation.{{methodName}}(req)
-                    .doOnSuccess(resp -> request.response().end(resp))
+            request.handler(req -> implementation.{{methodName}}({{inputType}}.fromProto(req))
+                    .doOnSuccess(resp -> request.response().end({{outputType}}.toProto(resp)))
                     .subscribe());
         });
 {{/unaryMethods}}
 {{#unaryManyMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
-            request.handler(req -> implementation.{{methodName}}(req)
-                    .doOnNext(msg -> request.response().write(msg))
+            request.handler(req -> implementation.{{methodName}}({{inputType}}.fromProto(req))
+                    .doOnNext(msg -> request.response().write({{outputType}}.toProto(msg)))
                     .doOnComplete(() -> request.response().end())
                     .subscribe());
         });
@@ -50,20 +54,20 @@ public class {{className}}  {
 {{#manyUnaryMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
             implementation.{{methodName}}(Observable.create(emitter -> {
-                        request.handler(emitter::onNext);
+                        request.handler(req -> emitter.onNext({{inputType}}.fromProto(req)));
                         request.endHandler($ -> emitter.onComplete());
                     }))
-                    .doOnSuccess(resp -> request.response().end(resp))
+                    .doOnSuccess(resp -> request.response().end({{outputType}}.toProto(resp)))
                     .subscribe();
         });
 {{/manyUnaryMethods}}
 {{#manyManyMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request -> {
             implementation.{{methodName}}(Observable.create(emitter -> {
-                        request.handler(emitter::onNext);
+                        request.handler(req -> emitter.onNext({{inputType}}.fromProto(req)));
                         request.endHandler($ -> emitter.onComplete());
                     }))
-                    .doOnNext(msg -> request.response().write(msg))
+                    .doOnNext(msg -> request.response().write({{outputType}}.toProto(msg)))
                     .doOnComplete(() -> request.response().end())
                     .subscribe();
         });
@@ -74,4 +78,5 @@ public class {{className}}  {
     public Handler<HttpServerRequest> getGrpcServer() {
         return server;
     }
+{{/service}}
 }

@@ -1,22 +1,22 @@
 package com.lwlee2608.vertx.grpc.plugin;
 
 
-import io.grpc.examples.helloworld.HelloReply;
-import io.grpc.examples.helloworld.HelloRequest;
-import io.grpc.examples.helloworld.VertxGreeterGrpcClient;
-import io.grpc.examples.helloworld.VertxGreeterGrpcServer;
+import io.grpc.examples.helloworld.component.VertxGreeterGrpcClient;
+import io.grpc.examples.helloworld.component.VertxGreeterGrpcServer;
+import io.grpc.examples.helloworld.pojo.HelloReply;
+import io.grpc.examples.helloworld.pojo.HelloRequest;
 import io.reactivex.Single;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -24,41 +24,35 @@ import java.net.ServerSocket;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
 public class HelloWordTest {
+    private static final Logger logger = LoggerFactory.getLogger(HelloWordTest.class);
 
-    VertxGreeterGrpcClient client;
-    int port;
-
-    @BeforeAll
-    public void init(Vertx vertx, VertxTestContext should) throws IOException {
-        port = getFreePort();
+    @Test
+    void testServerClient(Vertx vertx, VertxTestContext should) throws IOException {
+        int port = getFreePort();
 
         // Create gRPC Server
         VertxGreeterGrpcServer server = new VertxGreeterGrpcServer(vertx)
                 .callHandlers(new VertxGreeterGrpcServer.GreeterApi() {
                     @Override
                     public Single<HelloReply> sayHello(HelloRequest request) {
-                        return Single.just(
-                                HelloReply.newBuilder()
-                                        .setMessage(request.getName() + " World")
-                                        .build());
+                        should.verify(() -> Assertions.assertNull(request.getCount()));
+                        return Single.just(new HelloReply().setMessage(request.getName() + " World"));
                     }
                 });
         HttpServer httpServer = vertx.createHttpServer();
         httpServer.requestHandler(server.getGrpcServer())
                 .listen(port)
-                .onSuccess($ -> should.completeNow())
                 .onFailure(should::failNow);
 
         // Create gRPC Client
-        client = new VertxGreeterGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
-    }
-
-    @Test
-    void testServerClient(VertxTestContext should) {
-        client.sayHello(HelloRequest.newBuilder()
-                        .setName("Hello")
-                        .build())
-                .doOnSuccess(helloReply -> Assertions.assertEquals("Hello World", helloReply.getMessage()))
+        VertxGreeterGrpcClient client = new VertxGreeterGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
+        client.sayHello(new HelloRequest().setName("Hello"))
+                .doOnSuccess(helloReply -> {
+                    Assertions.assertEquals("Hello World", helloReply.getMessage());
+                    Assertions.assertEquals(0, helloReply.getId()); // id is not nullable and default value is 0
+                    Assertions.assertNull(helloReply.getAddress());
+                    Assertions.assertNull(helloReply.getAge());
+                })
                 .subscribe(helloReply -> should.completeNow(), should::failNow);
     }
 

@@ -1,0 +1,47 @@
+{{#packageName}}
+package {{packageName}};
+{{/packageName}}
+
+import lombok.Data;
+import lombok.experimental.Accessors;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Data
+@Accessors(chain = true)
+public class {{className}} {
+{{#fields}}
+    {{{declareField}}}
+{{/fields}}
+
+    static public {{protoFullName}} toProto({{className}} pojo) {
+        {{protoFullName}}.Builder builder = {{protoFullName}}.newBuilder();
+{{#fields}}
+{{#isNullable}}
+        if (pojo.{{name}} != null) {
+            {{toProtoFunction}}
+        }
+{{/isNullable}}
+{{^isNullable}}
+        {{toProtoFunction}}
+{{/isNullable}}
+{{/fields}}
+        return builder.build();
+    }
+
+    static public {{className}} fromProto({{protoFullName}} proto) {
+        {{className}} pojo = new {{className}}();
+{{#fields}}
+{{#isNullable}}
+        if (proto.{{hasFunction}}()) {
+            {{fromProtoFunction}}
+        }
+{{/isNullable}}
+{{^isNullable}}
+        {{fromProtoFunction}}
+{{/isNullable}}
+{{/fields}}
+        return pojo;
+    }
+}
