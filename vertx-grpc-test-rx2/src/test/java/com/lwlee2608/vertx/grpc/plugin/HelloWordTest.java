@@ -5,12 +5,13 @@ import io.grpc.examples.helloworld.component.VertxGreeterGrpcClient;
 import io.grpc.examples.helloworld.component.VertxGreeterGrpcServer;
 import io.grpc.examples.helloworld.pojo.HelloReply;
 import io.grpc.examples.helloworld.pojo.HelloRequest;
+import io.reactivex.Completable;
 import io.reactivex.Single;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.net.SocketAddress;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.reactivex.core.Vertx;
+import io.vertx.reactivex.core.http.HttpServer;
+import io.vertx.reactivex.core.net.SocketAddress;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -23,6 +24,7 @@ import java.net.ServerSocket;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
+@SuppressWarnings("ResultOfMethodCallIgnored")
 public class HelloWordTest {
     private static final Logger logger = LoggerFactory.getLogger(HelloWordTest.class);
 
@@ -40,20 +42,23 @@ public class HelloWordTest {
                     }
                 });
         HttpServer httpServer = vertx.createHttpServer();
-        httpServer.requestHandler(server.getGrpcServer())
-                .listen(port)
-                .onFailure(should::failNow);
+        httpServer.requestHandler(server.getGrpcServer());
+        Completable listen = httpServer.rxListen(port)
+                .doOnError(should::failNow)
+                .ignoreElement();
 
         // Create gRPC Client
         VertxGreeterGrpcClient client = new VertxGreeterGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
-        client.sayHello(new HelloRequest().setName("Hello"))
+        Completable sendMsg = client.sayHello(new HelloRequest().setName("Hello"))
                 .doOnSuccess(helloReply -> {
                     Assertions.assertEquals("Hello World", helloReply.getMessage());
                     Assertions.assertEquals(0, helloReply.getId()); // id is not nullable and default value is 0
                     Assertions.assertNull(helloReply.getAddress());
                     Assertions.assertNull(helloReply.getAge());
                 })
-                .subscribe(helloReply -> should.completeNow(), should::failNow);
+                .ignoreElement();
+
+        listen.andThen(sendMsg).subscribe(should::completeNow, should::failNow);
     }
 
 
