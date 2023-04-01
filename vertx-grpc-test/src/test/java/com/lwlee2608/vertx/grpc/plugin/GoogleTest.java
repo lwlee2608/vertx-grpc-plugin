@@ -1,36 +1,46 @@
 package com.lwlee2608.vertx.grpc.plugin;
 
-
 import com.google.protobuf.ByteString;
 import com.google.protobuf.EmptyProtos;
+import com.google.protobuf.pojo.Empty;
+import io.grpc.testing.integration.CompressionType;
 import io.grpc.testing.integration.Messages;
-import io.grpc.testing.integration.VertxTestServiceGrpcClient;
-import io.grpc.testing.integration.VertxTestServiceGrpcServer;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.net.SocketAddress;
-import io.vertx.core.streams.ReadStream;
-import io.vertx.core.streams.WriteStream;
+import io.grpc.testing.integration.PayloadType;
+import io.grpc.testing.integration.component.VertxTestServiceGrpcClient;
+import io.grpc.testing.integration.component.VertxTestServiceGrpcServer;
+import io.grpc.testing.integration.pojo.Payload;
+import io.grpc.testing.integration.pojo.SimpleRequest;
+import io.grpc.testing.integration.pojo.SimpleResponse;
+import io.grpc.testing.integration.pojo.StreamingInputCallRequest;
+import io.grpc.testing.integration.pojo.StreamingInputCallResponse;
+import io.grpc.testing.integration.pojo.StreamingOutputCallRequest;
+import io.grpc.testing.integration.pojo.StreamingOutputCallResponse;
+import io.reactivex.Observable;
+import io.reactivex.Single;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.reactivex.core.Vertx;
+import io.vertx.reactivex.core.http.HttpServer;
+import io.vertx.reactivex.core.net.SocketAddress;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
+@SuppressWarnings("ResultOfMethodCallIgnored")
 public class GoogleTest {
+    private static final Logger logger = LoggerFactory.getLogger(GoogleTest.class);
 
     VertxTestServiceGrpcClient client;
     int port;
@@ -43,84 +53,77 @@ public class GoogleTest {
         VertxTestServiceGrpcServer server = new VertxTestServiceGrpcServer(vertx)
                 .callHandlers(new VertxTestServiceGrpcServer.TestServiceApi() {
                     @Override
-                    public Future<EmptyProtos.Empty> emptyCall(EmptyProtos.Empty request) {
-                        return Future.failedFuture("Not yet implemented");
+                    public Single<Empty> emptyCall(Empty request) {
+                        return Single.error(new RuntimeException("Not yet implemented"));
                     }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
                     @Override
-                    public Future<Messages.SimpleResponse> unaryCall(Messages.SimpleRequest request) {
-                        return Future.succeededFuture(
-                                Messages.SimpleResponse.newBuilder()
-                                        .setUsername("FooBar")
-                                        .build());
+                    public Single<SimpleResponse> unaryCall(SimpleRequest request) {
+                        return Single.just(new SimpleResponse()
+                                .setUsername("FooBar"));
                     }
 
                     @Override
-                    public Future<EmptyProtos.Empty> unimplementedCall(EmptyProtos.Empty request) {
-                        return Future.failedFuture("Not yet implemented");
+                    public Single<Empty> unimplementedCall(Empty request) {
+                        return Single.error(new RuntimeException("Not yet implemented"));
                     }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingInputCall(stream StreamingInputCallRequest) returns (StreamingInputCallResponse);
                     @Override
-                    public Future<Messages.StreamingInputCallResponse> streamingInputCall(ReadStream<Messages.StreamingInputCallRequest> request) {
-                        Promise<Messages.StreamingInputCallResponse> promise = Promise.promise();
-                        List<Messages.StreamingInputCallRequest> list = new ArrayList<>();
-                        request.handler(list::add);
-                        request.endHandler($ -> {
-                            Messages.StreamingInputCallResponse resp = Messages.StreamingInputCallResponse.newBuilder()
-                                    .setAggregatedPayloadSize(list.size())
-                                    .build();
-                            promise.complete(resp);
+                    public Single<StreamingInputCallResponse> streamingInputCall(Observable<StreamingInputCallRequest> request) {
+                        return Single.create(emitter -> {
+                            List<StreamingInputCallRequest> list = new ArrayList<>();
+                            request.doOnNext(list::add)
+                                    .doOnComplete(() -> {
+                                        StreamingInputCallResponse resp = new StreamingInputCallResponse()
+                                                .setAggregatedPayloadSize(list.size());
+                                        emitter.onSuccess(resp);
+                                    })
+                                    .subscribe();
                         });
-                        return promise.future();
                     }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc StreamingOutputCall(StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> streamingOutputCall(Messages.StreamingOutputCallRequest request) {
-                         return response -> {
-                            response.write(Messages.StreamingOutputCallResponse.newBuilder()
-                                    .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
-                                    .build());
-                            response.write(Messages.StreamingOutputCallResponse.newBuilder()
-                                    .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
-                                    .build());
-                            response.end();
-                        };
+                    public Observable<StreamingOutputCallResponse> streamingOutputCall(StreamingOutputCallRequest request) {
+                        return Observable.create(emitter -> {
+                            emitter.onNext(new StreamingOutputCallResponse()
+                                    .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8))));
+                            emitter.onNext(new StreamingOutputCallResponse()
+                                    .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8))));
+                            emitter.onComplete();
+                        });
                     }
 
                     // Implement following RPC defined in test.proto:
                     //     rpc FullDuplexCall(stream StreamingOutputCallRequest) returns (stream StreamingOutputCallResponse);
                     @Override
-                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> fullDuplexCall(ReadStream<Messages.StreamingOutputCallRequest> request) {
-                        return response -> {
-                            request.endHandler($ -> {
-                                response.write(Messages.StreamingOutputCallResponse.newBuilder()
-                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8)).build())
-                                        .build());
-                                response.write(Messages.StreamingOutputCallResponse.newBuilder()
-                                        .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8)).build())
-                                        .build());
-                                response.end();
+                    public Observable<StreamingOutputCallResponse> fullDuplexCall(Observable<StreamingOutputCallRequest> request) {
+                        return Observable.create(emitter -> {
+                            request.subscribe(req -> {}, error -> {}, () -> {
+                                emitter.onNext(new StreamingOutputCallResponse()
+                                        .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8))));
+                                emitter.onNext(new StreamingOutputCallResponse()
+                                        .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-2", StandardCharsets.UTF_8))));
+                                emitter.onComplete();
                             });
-                        };
+                        });
                     }
 
                     @Override
-                    public Consumer<WriteStream<Messages.StreamingOutputCallResponse>> halfDuplexCall(ReadStream<Messages.StreamingOutputCallRequest> request) {
-                        return response -> {};
+                    public Observable<StreamingOutputCallResponse> halfDuplexCall(Observable<StreamingOutputCallRequest> request) {
+                        return Observable.error(new RuntimeException("Not yet implemented"));
                     }
                 });
 
         HttpServer httpServer = vertx.createHttpServer();
         httpServer.requestHandler(server.getGrpcServer())
-                .listen(port)
-                .onSuccess($ -> should.completeNow())
-                .onFailure(should::failNow);
+                .rxListen(port)
+                .subscribe($ -> should.completeNow(), should::failNow);
 
         // Create gRPC Client
         client = new VertxTestServiceGrpcClient(vertx, SocketAddress.inetSocketAddress(port, "localhost"));
@@ -128,66 +131,50 @@ public class GoogleTest {
 
     @Test
     void testUnaryUnary(VertxTestContext should) {
-        client.unaryCall(Messages.SimpleRequest.newBuilder()
-                        .setFillUsername(true)
-                        .build())
-                .onSuccess(reply -> Assertions.assertEquals("FooBar", reply.getUsername()))
-                .onSuccess(reply -> should.completeNow())
-                .onFailure(should::failNow);
+        client.unaryCall(new SimpleRequest()
+                        .setFillUsername(true))
+                .doOnSuccess(reply -> Assertions.assertEquals("FooBar", reply.getUsername()))
+                .subscribe(reply -> should.completeNow(), should::failNow);
     }
 
     @Test
     void testManyUnary(VertxTestContext should) {
-        client.streamingInputCall(req -> {
-                    req.write(Messages.StreamingInputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-1", StandardCharsets.UTF_8)).build())
-                            .build());
-                    req.write(Messages.StreamingInputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingInputRequest-2", StandardCharsets.UTF_8)).build())
-                            .build());
-                    req.end();
-                })
-                .onSuccess(reply -> Assertions.assertEquals(2, reply.getAggregatedPayloadSize()))
-                .onSuccess(reply -> should.completeNow())
-                .onFailure(should::failNow);
+        client.streamingInputCall(Observable.create(emitter -> {
+                    emitter.onNext(new StreamingInputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingInputRequest-1", StandardCharsets.UTF_8))));
+                    emitter.onNext(new StreamingInputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingInputRequest-2", StandardCharsets.UTF_8))));
+                    emitter.onComplete();
+                }))
+                .doOnSuccess(reply -> Assertions.assertEquals(2, reply.getAggregatedPayloadSize()))
+                .subscribe(reply -> should.completeNow(), should::failNow);
     }
 
     @Test
     void testUnaryMany(VertxTestContext should) {
-        Messages.StreamingOutputCallRequest request = Messages.StreamingOutputCallRequest.newBuilder()
-                .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)).build())
-                .build();
+        StreamingOutputCallRequest request = new StreamingOutputCallRequest()
+                .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)));
+        List<StreamingOutputCallResponse> list = new ArrayList<>();
         client.streamingOutputCall(request)
-                .onSuccess(response -> {
-                    List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
-                    response.handler(list::add);
-                    response.endHandler($ -> {
-                        Assertions.assertEquals(2, list.size());
-                        should.completeNow();
-                    });
-                    response.exceptionHandler(should::failNow);
+                .subscribe(list::add, should::failNow, () -> {
+                    Assertions.assertEquals(2, list.size());
+                    should.completeNow();
                 });
     }
 
     @Test
     void testManyMany(VertxTestContext should) {
-        client.fullDuplexCall(req -> {
-                    req.write(Messages.StreamingOutputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8)).build())
-                            .build());
-                    req.write(Messages.StreamingOutputCallRequest.newBuilder()
-                            .setPayload(Messages.Payload.newBuilder().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8)).build())
-                            .build());
-                    req.end();
-                })
-                .onSuccess(response -> {
-                    List<Messages.StreamingOutputCallResponse> list = new ArrayList<>();
-                    response.handler(list::add);
-                    response.endHandler($ -> {
-                        Assertions.assertEquals(2, list.size());
-                        should.completeNow();
-                    });
-                    response.exceptionHandler(should::failNow);
+        List<StreamingOutputCallResponse> list = new ArrayList<>();
+        client.fullDuplexCall(Observable.create(emitter -> {
+                    emitter.onNext(new StreamingOutputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8))));
+                    emitter.onNext(new StreamingOutputCallRequest()
+                            .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8))));
+                    emitter.onComplete();
+                }))
+                .subscribe(list::add, should::failNow, () -> {
+                    Assertions.assertEquals(2, list.size());
+                    should.completeNow();
                 });
     }
 
