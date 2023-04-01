@@ -9,9 +9,9 @@ public class VertxGrpcGenerator extends AbstractVertxGenerator {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            ProtocPlugin.generate(new VertxGrpcGenerator("standard/client.mustache", "standard/server.mustache"));
+            ProtocPlugin.generate(new VertxGrpcGenerator("component/client.mustache", "component/server.mustache"));
         } else {
-            ProtocPlugin.debug(new VertxGrpcGenerator("standard/client.mustache", "standard/server.mustache"), args[0]);
+            ProtocPlugin.debug(new VertxGrpcGenerator("component/client.mustache", "component/server.mustache"), args[0]);
         }
     }
 }

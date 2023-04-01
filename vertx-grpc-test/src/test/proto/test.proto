@@ -49,41 +49,41 @@ service TestService {
 
   // One request followed by a sequence of responses (streamed download).
   // The server returns the payload with client desired type and sizes.
-//  rpc StreamingOutputCall(StreamingOutputCallRequest)
-//      returns (stream StreamingOutputCallResponse);
+  rpc StreamingOutputCall(StreamingOutputCallRequest)
+      returns (stream StreamingOutputCallResponse);
 
-//  // A sequence of requests followed by one response (streamed upload).
-//  // The server returns the aggregated size of client payload as the result.
-//  rpc StreamingInputCall(stream StreamingInputCallRequest)
-//      returns (StreamingInputCallResponse);
-//
-//  // A sequence of requests with each request served by the server immediately.
-//  // As one request could lead to multiple responses, this interface
-//  // demonstrates the idea of full duplexing.
-//  rpc FullDuplexCall(stream StreamingOutputCallRequest)
-//      returns (stream StreamingOutputCallResponse);
-//
-//  // A sequence of requests followed by a sequence of responses.
-//  // The server buffers all the client requests and then serves them in order. A
-//  // stream of responses are returned to the client when the server starts with
-//  // first request.
-//  rpc HalfDuplexCall(stream StreamingOutputCallRequest)
-//      returns (stream StreamingOutputCallResponse);
-//
+  // A sequence of requests followed by one response (streamed upload).
+  // The server returns the aggregated size of client payload as the result.
+  rpc StreamingInputCall(stream StreamingInputCallRequest)
+      returns (StreamingInputCallResponse);
+
+  // A sequence of requests with each request served by the server immediately.
+  // As one request could lead to multiple responses, this interface
+  // demonstrates the idea of full duplexing.
+  rpc FullDuplexCall(stream StreamingOutputCallRequest)
+      returns (stream StreamingOutputCallResponse);
+
+  // A sequence of requests followed by a sequence of responses.
+  // The server buffers all the client requests and then serves them in order. A
+  // stream of responses are returned to the client when the server starts with
+  // first request.
+  rpc HalfDuplexCall(stream StreamingOutputCallRequest)
+      returns (stream StreamingOutputCallResponse);
+
 //  // The test server will not implement this method. It will be used
 //  // to test the behavior when clients call unimplemented methods.
-//  rpc UnimplementedCall(grpc.testing.Empty) returns (grpc.testing.Empty);
-//}
-//
-//// A simple service NOT implemented at servers so clients can test for
-//// that case.
-//service UnimplementedService {
-//  // A call that no server should implement
-//  rpc UnimplementedCall(grpc.testing.Empty) returns(grpc.testing.Empty);
-//}
-//
-//// A service used to control reconnect server.
-//service ReconnectService {
-//  rpc Start(grpc.testing.Empty) returns (grpc.testing.Empty);
-//  rpc Stop(grpc.testing.Empty) returns (grpc.testing.ReconnectInfo);
+  rpc UnimplementedCall(grpc.testing.Empty) returns (grpc.testing.Empty);
+}
+
+// A simple service NOT implemented at servers so clients can test for
+// that case.
+service UnimplementedService {
+  // A call that no server should implement
+  rpc UnimplementedCall(grpc.testing.Empty) returns(grpc.testing.Empty);
+}
+
+// A service used to control reconnect server.
+service ReconnectService {
+  rpc Start(grpc.testing.Empty) returns (grpc.testing.Empty);
+  rpc Stop(grpc.testing.Empty) returns (grpc.testing.ReconnectInfo);
 }

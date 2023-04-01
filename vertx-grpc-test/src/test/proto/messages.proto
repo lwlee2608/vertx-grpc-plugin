@@ -31,10 +31,12 @@
 
 syntax = "proto3";
 
-package grpc.testing;
+import "google/protobuf/wrappers.proto";
 
 option java_multiple_files = true;
 option java_package = "io.grpc.testing.integration";
+
+package grpc.testing;
 
 // The type of payload that should be returned.
 enum PayloadType {

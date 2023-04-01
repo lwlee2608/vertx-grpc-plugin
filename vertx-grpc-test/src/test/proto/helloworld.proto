@@ -29,6 +29,9 @@
 
 syntax = "proto3";
 
+import "google/protobuf/wrappers.proto";
+import "messages.proto";
+
 option java_multiple_files = true;
 option java_package = "io.grpc.examples.helloworld";
 option java_outer_classname = "HelloWorldProto";
@@ -45,9 +48,26 @@ service Greeter {
 // The request message containing the user's name.
 message HelloRequest {
   string name = 1;
+  google.protobuf.Int32Value count = 2;
 }
 
 // The response message containing the greetings
 message HelloReply {
   string message = 1;
+  int32 id = 2;
+  google.protobuf.StringValue address = 3;
+  google.protobuf.Int32Value age = 4;
+  Payload payload = 5;
+  repeated grpc.testing.EchoStatus status = 6;
+  repeated int32 arrays = 7;
+}
+message Payload {
+  PayloadType type = 1;
+  bytes body = 2;
+}
+
+enum PayloadType {
+  COMPRESSABLE = 0;
+  UNCOMPRESSABLE = 1;
+  RANDOM = 2;
 }
