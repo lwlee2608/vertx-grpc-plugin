@@ -1,10 +1,10 @@
 package com.lwlee2608.vertx.grpc.plugin;
 
 
-import io.grpc.examples.helloworld.HelloReply;
-import io.grpc.examples.helloworld.HelloRequest;
-import io.grpc.examples.helloworld.VertxGreeterGrpcClient;
-import io.grpc.examples.helloworld.VertxGreeterGrpcServer;
+import io.grpc.examples.helloworld.pojo.HelloReply;
+import io.grpc.examples.helloworld.pojo.HelloRequest;
+import io.grpc.examples.helloworld.component.VertxGreeterGrpcClient;
+import io.grpc.examples.helloworld.component.VertxGreeterGrpcServer;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -37,9 +37,8 @@ public class HelloWordTest {
                     @Override
                     public Future<HelloReply> sayHello(HelloRequest request) {
                         return Future.succeededFuture(
-                                HelloReply.newBuilder()
-                                        .setMessage(request.getName() + " World")
-                                        .build());
+                                new HelloReply()
+                                        .setMessage(request.getName() + " World"));
                     }
                 });
         HttpServer httpServer = vertx.createHttpServer();
@@ -54,9 +53,8 @@ public class HelloWordTest {
 
     @Test
     void testServerClient(VertxTestContext should) {
-        client.sayHello(HelloRequest.newBuilder()
-                        .setName("Hello")
-                        .build())
+        client.sayHello(new HelloRequest()
+                        .setName("Hello"))
                 .onSuccess(helloReply -> Assertions.assertEquals("Hello World", helloReply.getMessage()))
                 .onSuccess(helloReply -> should.completeNow())
                 .onFailure(should::failNow);

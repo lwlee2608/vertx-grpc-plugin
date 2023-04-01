@@ -9,6 +9,9 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.core.streams.WriteStream;
 import io.vertx.grpc.server.GrpcServer;
+{{#imports}}
+import {{.}};
+{{/imports}}
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +24,7 @@ public class {{className}}  {
         this.server = GrpcServer.server(vertx);
     }
 
+{{#service}}
     public interface {{serviceName}}Api {
 {{#unaryMethods}}
         Future<{{outputType}}> {{methodName}}({{inputType}} request);
@@ -39,8 +43,8 @@ public class {{className}}  {
     public {{className}} callHandlers({{serviceName}}Api implementation) {
 {{#unaryMethods}}
         server.callHandler({{serviceName}}Grpc.{{methodNameGetter}}(), request ->
-                request.handler(req -> implementation.{{methodName}}(req)
-                    .onSuccess(resp -> request.response().end(resp))
+                request.handler(req -> implementation.{{methodName}}({{inputType}}.fromProto(req))
+                    .onSuccess(resp -> request.response().end({{outputType}}.toProto(resp)))
                 ));
 {{/unaryMethods}}
 {{#unaryManyMethods}}
@@ -58,4 +62,5 @@ public class {{className}}  {
     public Handler<HttpServerRequest> getGrpcServer() {
         return server;
     }
+{{/service}}
 }
