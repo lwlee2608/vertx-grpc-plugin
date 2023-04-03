@@ -37,7 +37,7 @@ public class AbstractVertxGenerator extends Generator {
 
     public AbstractVertxGenerator(String clientTemplate, String serverTemplate) {
         this.clientTemplate = clientTemplate;
-        this.serverTemplate =  serverTemplate;
+        this.serverTemplate = serverTemplate;
     }
 
     private String getServiceJavaDocPrefix() {
@@ -65,10 +65,11 @@ public class AbstractVertxGenerator extends Generator {
         context.messages.addAll(protosToGenerate.stream()
                 .flatMap(fileProto -> {
                     String packageName = extractPackageName(fileProto);
+                    String outerClassName = extractOuterClassname(fileProto);
                     return fileProto.getMessageTypeList()
                             .stream()
                             .map(msg -> {
-                                MessageContext messageContext = buildMessageContext(msg, packageName, typeMap);
+                                MessageContext messageContext = buildMessageContext(msg, packageName, outerClassName, typeMap);
                                 String key = "." + fileProto.getPackage() + "." + msg.getName();
                                 pojoTypeMap.put(key, messageContext);
                                 return messageContext;
@@ -145,12 +146,13 @@ public class AbstractVertxGenerator extends Generator {
         return contexts;
     }
 
-    private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName, ProtoTypeMap typeMap) {
+    private MessageContext buildMessageContext(DescriptorProtos.DescriptorProto descriptor, String packageName, String outerClassname, ProtoTypeMap typeMap) {
         MessageContext messageContext = new MessageContext();
         messageContext.name = descriptor.getName();
         messageContext.className = messageContext.name;
         messageContext.packageName = packageName + ".pojo";
         messageContext.protoPackage = packageName;
+        messageContext.outerClassname = outerClassname;
 
         // populate fields
         descriptor.getFieldList().forEach(fieldDescriptor -> {
@@ -172,7 +174,11 @@ public class AbstractVertxGenerator extends Generator {
 
             if (fieldContext.isEnum) {
                 // TODO Enum type may be defined in another proto file
-                messageContext.imports.add(packageName + "." + fieldContext.javaType);
+                if (Strings.isNullOrEmpty(outerClassname)) {
+                    messageContext.imports.add(packageName + "." + fieldContext.javaType);
+                } else {
+                    messageContext.imports.add(packageName + "." + messageContext.outerClassname + "." + fieldContext.javaType);
+                }
             }
             if (fieldContext.isNullable && !fieldContext.isMessage) {
                 fieldContext.nullableType = Util.getSimpleClass(fieldDescriptor.getTypeName());
@@ -188,20 +194,26 @@ public class AbstractVertxGenerator extends Generator {
 
     private String getJavaType(DescriptorProtos.FieldDescriptorProto descriptor) {
         switch (descriptor.getType()) {
-            case TYPE_DOUBLE: return "Double";
-            case TYPE_FLOAT: return "Float";
+            case TYPE_DOUBLE:
+                return "Double";
+            case TYPE_FLOAT:
+                return "Float";
             case TYPE_INT64:
             case TYPE_FIXED64:
             case TYPE_SFIXED64:
             case TYPE_SINT64:
-            case TYPE_UINT64: return "Long";
+            case TYPE_UINT64:
+                return "Long";
             case TYPE_INT32:
             case TYPE_UINT32:
             case TYPE_SFIXED32:
             case TYPE_SINT32:
-            case TYPE_FIXED32: return "Integer";
-            case TYPE_BOOL: return "Boolean";
-            case TYPE_STRING: return "String";
+            case TYPE_FIXED32:
+                return "Integer";
+            case TYPE_BOOL:
+                return "Boolean";
+            case TYPE_STRING:
+                return "String";
             case TYPE_MESSAGE: {
                 String typeName = descriptor.getTypeName();
                 switch (typeName) {
@@ -225,8 +237,10 @@ public class AbstractVertxGenerator extends Generator {
                         return Util.getSimpleClass(typeName);
                 }
             }
-            case TYPE_ENUM: return Util.getSimpleClass(descriptor.getTypeName());
-            case TYPE_BYTES: return "ByteString";
+            case TYPE_ENUM:
+                return Util.getSimpleClass(descriptor.getTypeName());
+            case TYPE_BYTES:
+                return "ByteString";
             case TYPE_GROUP:
             default:
                 throw new RuntimeException("Type '" + descriptor.getType() + "' Not supported yet");
@@ -236,24 +250,31 @@ public class AbstractVertxGenerator extends Generator {
     private String getDefaultValue(DescriptorProtos.FieldDescriptorProto descriptor) {
         switch (descriptor.getType()) {
             case TYPE_DOUBLE:
-            case TYPE_FLOAT: return "0.0";
+            case TYPE_FLOAT:
+                return "0.0";
             case TYPE_INT64:
             case TYPE_FIXED64:
             case TYPE_SFIXED64:
             case TYPE_SINT64:
-            case TYPE_UINT64: return "0L";
+            case TYPE_UINT64:
+                return "0L";
             case TYPE_INT32:
             case TYPE_UINT32:
             case TYPE_SFIXED32:
             case TYPE_SINT32:
-            case TYPE_FIXED32: return "0";
-            case TYPE_BOOL: return "false";
-            case TYPE_STRING: return "\"\"";
-            case TYPE_MESSAGE: return "null";
+            case TYPE_FIXED32:
+                return "0";
+            case TYPE_BOOL:
+                return "false";
+            case TYPE_STRING:
+                return "\"\"";
+            case TYPE_MESSAGE:
+                return "null";
             case TYPE_ENUM: {
                 return Util.getSimpleClass(descriptor.getTypeName()) + ".valueOf(0)";
             }
-            case TYPE_BYTES: return "ByteString.EMPTY";
+            case TYPE_BYTES:
+                return "ByteString.EMPTY";
             case TYPE_GROUP:
             default:
                 throw new RuntimeException("Type '" + descriptor.getType() + "' Not supported yet");
@@ -306,6 +327,23 @@ public class AbstractVertxGenerator extends Generator {
         }
 
         return Strings.nullToEmpty(proto.getPackage());
+    }
+
+    private String extractOuterClassname(DescriptorProtos.FileDescriptorProto proto) {
+        DescriptorProtos.FileOptions options = proto.getOptions();
+        if (options != null) {
+            if (!options.getJavaMultipleFiles()) {
+                String outerClassname = options.getJavaOuterClassname();
+                if (!Strings.isNullOrEmpty(outerClassname)) {
+                    return outerClassname;
+                } else {
+                    StringBuilder filename = new StringBuilder(proto.getName().replace(".proto", ""));
+                    filename.setCharAt(0, Character.toUpperCase(filename.charAt(0)));
+                    return filename.toString();
+                }
+            }
+        }
+        return null;
     }
 
     private ServiceContext buildServiceContext(DescriptorProtos.ServiceDescriptorProto serviceProto, ProtoTypeMap typeMap, List<DescriptorProtos.SourceCodeInfo.Location> locations, int serviceNumber) {
