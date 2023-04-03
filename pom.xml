@@ -17,7 +17,7 @@
 
     <groupId>io.github.lwlee2608</groupId>
     <artifactId>vertx-grpc-plugin-parent</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>vertx-grpc-plugin</name>
     <description>A new gRPC protoc-plugin using the new vertx-grpc library</description>
