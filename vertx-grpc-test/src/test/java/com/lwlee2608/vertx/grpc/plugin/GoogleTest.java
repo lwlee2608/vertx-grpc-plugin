@@ -1,11 +1,7 @@
 package com.lwlee2608.vertx.grpc.plugin;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.EmptyProtos;
 import com.google.protobuf.pojo.Empty;
-import io.grpc.testing.integration.Messages.CompressionType;
-import io.grpc.testing.integration.Messages;
-import io.grpc.testing.integration.Messages.PayloadType;
 import io.grpc.testing.integration.component.VertxTestServiceGrpcClient;
 import io.grpc.testing.integration.component.VertxTestServiceGrpcServer;
 import io.grpc.testing.integration.pojo.Payload;
@@ -35,6 +31,7 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
@@ -104,7 +101,9 @@ public class GoogleTest {
                     @Override
                     public Observable<StreamingOutputCallResponse> fullDuplexCall(Observable<StreamingOutputCallRequest> request) {
                         return Observable.create(emitter -> {
-                            request.subscribe(req -> {}, error -> {}, () -> {
+                            request.subscribe(req -> {
+                            }, error -> {
+                            }, () -> {
                                 emitter.onNext(new StreamingOutputCallResponse()
                                         .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputResponse-1", StandardCharsets.UTF_8))));
                                 emitter.onNext(new StreamingOutputCallResponse()
@@ -151,20 +150,18 @@ public class GoogleTest {
     }
 
     @Test
-    void testUnaryMany(VertxTestContext should) {
+    void testUnaryMany(VertxTestContext should) throws InterruptedException {
         StreamingOutputCallRequest request = new StreamingOutputCallRequest()
                 .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest", StandardCharsets.UTF_8)));
-        List<StreamingOutputCallResponse> list = new ArrayList<>();
+        CountDownLatch receivedLatch = new CountDownLatch(2);
         client.streamingOutputCall(request)
-                .subscribe(list::add, should::failNow, () -> {
-                    Assertions.assertEquals(2, list.size());
-                    should.completeNow();
-                });
+                .subscribe(resp -> receivedLatch.countDown(), should::failNow, should::completeNow);
+        receivedLatch.await();
     }
 
     @Test
-    void testManyMany(VertxTestContext should) {
-        List<StreamingOutputCallResponse> list = new ArrayList<>();
+    void testManyMany(VertxTestContext should) throws InterruptedException {
+        CountDownLatch receivedLatch = new CountDownLatch(2);
         client.fullDuplexCall(Observable.create(emitter -> {
                     emitter.onNext(new StreamingOutputCallRequest()
                             .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest-1", StandardCharsets.UTF_8))));
@@ -172,10 +169,8 @@ public class GoogleTest {
                             .setPayload(new Payload().setBody(ByteString.copyFrom("StreamingOutputRequest-2", StandardCharsets.UTF_8))));
                     emitter.onComplete();
                 }))
-                .subscribe(list::add, should::failNow, () -> {
-                    Assertions.assertEquals(2, list.size());
-                    should.completeNow();
-                });
+                .subscribe(resp -> receivedLatch.countDown(), should::failNow, should::completeNow);
+        receivedLatch.await();
     }
 
     private Integer getFreePort() throws IOException {
